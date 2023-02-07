@@ -91,7 +91,7 @@ import casadi.*
 singleTimeDV = 1;
 
 % Number of points for initialization:
-config.grid.nTrajPts = 20;
+config.grid.nTrajPts = 100;
 
 % Physical parameters for dynamics
 m1 = 2.0; config.dyn.m1 = m1;   %cart mass

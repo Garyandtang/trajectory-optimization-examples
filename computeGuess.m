@@ -12,7 +12,7 @@ l = config.dyn.l;
 
 n = config.grid.nTrajPts;  %Number of grid points in guess
 
-tEnd = 3;   %Period of a simple pendulum
+tEnd = 2*pi*sqrt(l/g);   %Period of a simple pendulum
 t = linspace(0,tEnd,n);
 
 % Assume that the cart follows a sinusoidal trajectory, conserving CoM

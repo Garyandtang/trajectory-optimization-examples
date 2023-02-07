@@ -88,13 +88,14 @@ import casadi.*
 
 % flag
 singleTimeDV = 1;
+plotError = 1;
 
 % Number of points for initialization:
-config.grid.nTrajPts = 20;
+config.grid.nTrajPts = 100;
 
 % Physical parameters for dynamics
-m1 = 2.0; config.dyn.m1 = m1;   %cart mass
-m2 = 0.5; config.dyn.m2 = m2;   %pendulum mass
+m1 = 1; config.dyn.m1 = m1;   %cart mass
+m2 = 1; config.dyn.m2 = m2;   %pendulum mass
 config.dyn.g = 9.81;
 config.dyn.l = 1;
 g = config.dyn.g;
@@ -193,12 +194,12 @@ J = 0;
 % constraints
 dt = (decVar_T(2) - decVar_T(1)) / (config.grid.nTrajPts - 1);
 for k = 2 : config.grid.nTrajPts
-    dzk_prev = dzk;
     zk_prev = zk;
     uk_prev = uk;
-    dzk = f(zk, uk);
+    dzk_prev = dzk;
     zk = MX.sym(['X_' num2str(k)], 4);
     uk = MX.sym(['U_' num2str(k)]);
+    dzk = f(zk, uk);
     decVar_U = [decVar_U; uk];
     decVar_Z = [decVar_Z; zk];
     lbu = [lbu; bounds.control.lower];
@@ -217,8 +218,8 @@ for k = 2 : config.grid.nTrajPts
 end
 % add final state bounded
 g = [g; zk];
-lbg = [lbg;-0.7;pi;0;0];
-ubg = [ubg;-0.7;pi;0;0];
+lbg = [lbg;0;pi;0;0];
+ubg = [ubg;0;pi;0;0];
 
 % concatenate all decVar
 w = [decVar_T; decVar_Z; decVar_U];
@@ -236,22 +237,88 @@ w_opt = full(sol.x);
 dim.nTime = [1, size(decVar_T, 1)];
 dim.nState = [4, config.grid.nTrajPts];
 dim.nControl = [1, config.grid.nTrajPts];
-% Post-processing:
-[t,x,u] = unPackDecVar(w_opt,dim);
-traj.time = linspace(t(1),t(2),config.grid.nTrajPts);
-traj.state = x;
-traj.control = u;
-traj.objVal = 1;
-traj.exitFlag = 1;
-traj.interp.state = @(tt)( interp1(traj.time',traj.state',tt')' );
-traj.interp.control = @(tt)( interp1(traj.time',traj.control',tt')' );
 
+% Post-processing:
+[t,soln.state,soln.control] = unPackDecVar(w_opt,dim);
+soln.time = linspace(t(1),t(2),config.grid.nTrajPts);
+tSoln = soln.time;
+xSoln = soln.state;
+uSoln = soln.control;
+soln.objVal = full(sol.f);
+
+soln.exitFlag = 1;
+soln.interp.state = @(tt)( interp1(tSoln',xSoln',tt')' );
+soln.interp.control = @(tt)( interp1(tSoln',uSoln',tt')' );
+
+% use piecewise quadratic interpolation for the state
+fSoln = full(f(xSoln, uSoln));
+soln.interp.state = @(t)( bSpline2(tSoln,xSoln,fSoln,t) );
+
+% interpolation for checking collocation constraint along the trjeatory
+%  collocation constraint = (dynamics) - (derivative of state trajectory)
+% f(t, x(t), u(t)) - f(t)
+soln.interp.collCst = @(t)(...
+    full(f(soln.interp.state(t), soln.interp.control(t)))...
+    - interp1(tSoln', fSoln',t)' );
+
+% use multi-segment simpson quadrature to estimate the absolute local error
+absColErr = @(t)(abs(soln.interp.collCst(t)));
+nSegment = config.grid.nTrajPts-1;
+nState = size(xSoln,1);
+quadTol = 1e-12;   %Compute quadrature to this tolerance  
+soln.info.error = zeros(nState,nSegment);
+for i=1:nSegment
+    soln.info.error(:,i) = rombergQuadrature(absColErr,tSoln([i,i+1]),quadTol);
+end
+soln.info.maxError = max(max(soln.info.error));
+
+% plot the animation
 P.plotFunc = @(t,z)( drawCartPole(t,z,config.dyn) );
 P.speed = 0.7;
 P.figNum = 102;
-t = linspace(traj.time(1),traj.time(end),250);
-z = traj.interp.state(t);
-animate(t,z,P)
+t = linspace(tSoln(1),tSoln(end),150);
+z = soln.interp.state(t);
+% animate(t,z,P)
 
 % Plot the results:
-figure(101); clf; plotTraj(traj,config);
+figure(101); clf; plotTraj(soln,config);
+
+%%%% Show the error in the collocation constraint between grid points:
+%
+if plotError
+    % Then we can plot an estimate of the error along the trajectory
+    figure(5); clf;
+    
+    % NOTE: the following commands have only been implemented for the direct
+    % collocation(trapezoid, hermiteSimpson) methods, and will not work for
+    % chebyshev or rungeKutta methods.
+    cc = soln.interp.collCst(t);
+    
+    subplot(2,2,1);
+    plot(t,cc(1,:))
+    title('Collocation Error:   dx/dt - f(t,x,u)')
+    ylabel('d/dt cart position')
+    
+    subplot(2,2,3);
+    plot(t,cc(2,:))
+    xlabel('time')
+    ylabel('d/dt pole angle')
+    
+    idx = 1:length(soln.info.error);
+    subplot(2,2,2); hold on;
+    plot(idx,soln.info.error(1,:),'ko');
+    title('State Error')
+    ylabel('cart position')
+    
+    subplot(2,2,4); hold on;
+    plot(idx,soln.info.error(2,:),'ko');
+    xlabel('segment index')
+    ylabel('pole angle');
+end
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+
+
