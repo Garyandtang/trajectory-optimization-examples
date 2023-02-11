@@ -91,11 +91,11 @@ import casadi.*
 singleTimeDV = 1;
 
 % Number of points for initialization:
-config.grid.nTrajPts = 100;
+config.grid.nTrajPts = 15;
 
 % Physical parameters for dynamics
-m1 = 2.0; config.dyn.m1 = m1;   %cart mass
-m2 = 0.5; config.dyn.m2 = m2;   %pendulum mass
+m1 = 1; config.dyn.m1 = m1;   %cart mass
+m2 = 1; config.dyn.m2 = m2;   %pendulum mass
 config.dyn.g = 9.81;
 config.dyn.l = 1;
 g = config.dyn.g;
@@ -195,22 +195,22 @@ for k = 2 : config.grid.nTrajPts
     vk_prev = vk;
     ddqk_prev = ddqk;
     uk_prev = uk;
-    ddqk = f(qk, vk, uk);
     qk = MX.sym(['Q_' num2str(1)], 2);
     vk = MX.sym(['V_' num2str(1)], 2);
     uk = MX.sym(['U_' num2str(k)]);
+    ddqk = f(qk, vk, uk);
     decVar_Z = [decVar_Z; qk; vk];
     decVar_U = [decVar_U; uk];
     lbu = [lbu; bounds.control.lower];
     ubu = [ubu; bounds.control.upper];
     lbz = [lbz; bounds.state.lower];
     ubz = [ubz; bounds.state.upper];
-    % calculate cost function by tapezoidal rule
+    % calculate cost function based on approximated u(t)
     J = J + dt*(uk_prev^2 + uk^2 + uk_prev * uk)/3;
 
-    % calcuate defect constraints besed on trapezoidal rule
+    % calcuate defect constraints besed on consistent trapezoidal rule
     g1 = vk - vk_prev -dt/2*(ddqk + ddqk_prev);
-    g2 = qk - qk_prev -vk*dt + dt^2/6*(2*ddqk_prev + ddqk);
+    g2 = qk - qk_prev -vk_prev*dt - dt^2*(2*ddqk_prev + ddqk)/6;
     g = [g; g1;g2];
     lbg = [lbg; zeros(4, 1)];
     ubg = [ubg; zeros(4,1)];
@@ -218,8 +218,8 @@ for k = 2 : config.grid.nTrajPts
 end
 % add final state bounded
 g = [g; qk;vk];
-lbg = [lbg;-0.7;pi;0;0];
-ubg = [ubg;-0.7;pi;0;0];
+lbg = [lbg;0;pi;0;0];
+ubg = [ubg;0;pi;0;0];
 
 % concatenate all decVar
 w = [decVar_T; decVar_Z; decVar_U];
@@ -238,21 +238,82 @@ dim.nTime = [1, size(decVar_T, 1)];
 dim.nState = [4, config.grid.nTrajPts];
 dim.nControl = [1, config.grid.nTrajPts];
 % Post-processing:
-[t,x,u] = unPackDecVar(w_opt,dim);
-traj.time = linspace(t(1),t(2),config.grid.nTrajPts);
-traj.state = x;
-traj.control = u;
-traj.objVal = 1;
-traj.exitFlag = 1;
-traj.interp.state = @(tt)( interp1(traj.time',traj.state',tt')' );
-traj.interp.control = @(tt)( interp1(traj.time',traj.control',tt')' );
+[t,soln.state,soln.control] = unPackDecVar(w_opt,dim);
+soln.time = linspace(t(1),t(2),config.grid.nTrajPts);
+soln.configuration = soln.state(1:2,:);
+soln.dConfiguration = soln.state(3:4,:);
+soln.objVal = 1;
+soln.exitFlag = 1;
+% traj.interp.state = @(tt)( interp1(traj.time',traj.state',tt')' );
+soln.interp.control = @(tt)( interp1(soln.time',soln.control',tt')' );
+
+% use piecewise quadratic interpolation first-derivative of configuration
+% use piecewise cubic interpolation for configuration
+soln.ddConfig = full(f(soln.configuration, soln.dConfiguration, soln.control));
+soln.interp.dConfig = @(tt)( bSpline2(soln.time, soln.dConfiguration, ...
+    soln.ddConfig, tt));
+soln.interp.config = @(tt) (bSpline3(soln.time, soln.configuration,...
+    soln.dConfiguration, soln.ddConfig, tt));
+soln.interp.state = @(tt) ([soln.interp.config(tt); soln.interp.dConfig(tt)]);
+soln.interp.ddConfig = @(tt) (interp1(soln.time',soln.ddConfig',tt)');
+
+% interpolation for checking collocation constraint along the trjeatory
+%  collocation constraint = ddq(t) - f(q,dq,u) 
+soln.interp.collCst = @(t)(...
+    full(f(soln.interp.config(t), soln.interp.dConfig(t), soln.interp.control(t)))...
+    - soln.interp.ddConfig(t) );
+
+% use multi-segment simpson quadrature to estimate the absolute local error
+absColErr = @(t)(abs(soln.interp.collCst(t)));
+nSegment = config.grid.nTrajPts-1;
+nState = size(soln.configuration,1);
+quadTol = 1e-12;   %Compute quadrature to this tolerance  
+soln.info.error = zeros(nState,nSegment);
+for i=1:nSegment
+    soln.info.error(:,i) = rombergQuadrature(absColErr,soln.time([i,i+1]),quadTol);
+end
+soln.info.maxError = max(max(soln.info.error));
+
 
 P.plotFunc = @(t,z)( drawCartPole(t,z,config.dyn) );
 P.speed = 0.7;
 P.figNum = 102;
-t = linspace(traj.time(1),traj.time(end),250);
-z = traj.interp.state(t);
-animate(t,z,P)
+t = linspace(soln.time(1),soln.time(end),250);
+z = soln.interp.state(t);
+% animate(t,z,P)
 
 % Plot the results:
-figure(101); clf; plotTraj(traj,config);
+figure(101); clf; plotTraj(soln,config);
+
+%%%% Show the error in the collocation constraint between grid points:
+%
+if 1
+    % Then we can plot an estimate of the error along the trajectory
+    figure(5); clf;
+    
+    % NOTE: the following commands have only been implemented for the direct
+    % collocation(trapezoid, hermiteSimpson) methods, and will not work for
+    % chebyshev or rungeKutta methods.
+    cc = soln.interp.collCst(t);
+    
+    subplot(2,2,1);
+    plot(t,cc(1,:))
+    title('Collocation Error:   dx/dt - f(t,x,u)')
+    ylabel('d/dt cart position')
+    
+    subplot(2,2,3);
+    plot(t,cc(2,:))
+    xlabel('time')
+    ylabel('d/dt pole angle')
+    
+    idx = 1:length(soln.info.error);
+    subplot(2,2,2); hold on;
+    plot(idx,soln.info.error(1,:),'ko');
+    title('State Error')
+    ylabel('cart position')
+    
+    subplot(2,2,4); hold on;
+    plot(idx,soln.info.error(2,:),'ko');
+    xlabel('segment index')
+    ylabel('pole angle');
+end

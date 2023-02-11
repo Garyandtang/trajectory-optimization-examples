@@ -1,3 +1,4 @@
+function soln = generalTrapezoidMethod(config)
 % main_casadi.m
 %
 % This script runs general direct collocation methods for trajectory
@@ -81,52 +82,41 @@
 %       bounded time
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-clc; clear;
 %%% Setup casadi solver 
 addpath(genpath("D:\software\casadi-windows-matlabR2016a-v3.5.5"))
 import casadi.*
 
 % flag
 singleTimeDV = 1;
-plotError = 1;
+plotError = 0;
 
-% Number of points for initialization:
-config.grid.nTrajPts = 20;
-
-% Physical parameters for dynamics
-m1 = 1; config.dyn.m1 = m1;   %cart mass
-m2 = 1; config.dyn.m2 = m2;   %pendulum mass
-config.dyn.g = 9.81;
-config.dyn.l = 1;
+% get problem configuration
 g = config.dyn.g;
 l = config.dyn.l;
-
-% Compute an initial guess at a trajectory:
-config.guess = computeGuess(config);
-
-% Bounds:
-config.bounds = computeBounds(config);
+m1 = config.dyn.m1;
+m2 = config.dyn.m2;
 bounds = config.bounds;
+initState = config.initState;
+finalState = config.finalState;
 
 %%% Declare model variables
-x = MX.sym('x');    % cart position
-q = MX.sym('q');    % pole angle
-dx = MX.sym('dx');  % cart velocity
-dq = MX.sym('dq');  % pole angular rate
-z = [x; q; dx; dq]; % state vector of cartpole
-u = MX.sym('u');    % control input: force on cart
-
+q1 = MX.sym('q1');    % cart position
+q2 = MX.sym('q2');    % pole angle
+dq1 = MX.sym('dq1');  % cart velocity
+dq2 = MX.sym('dq2');  % pole angular rate
+q = [q1; q2];         % configuration vector
+dq = [dq1; dq2];      % first time-deriviative of configuration        
+u = MX.sym('u');    % control input: force on car
+z = [q;dq];
 %%% Model equations: continuous system dynamics
-ddx = (l*m2*sin(q)*dq^2 + u + m2*g*cos(q)*sin(q))/(m1+m2*(1 - cos(q)^2));
-ddq = -(l*m2*cos(q)*sin(q)*dq^2 + u*cos(q)+(m1+m2)*g*sin(q))...
-        /(l*m1+l*m2*(1 - cos(q)^2));
-dz = [z(3);
-      z(4);
-      ddx;
-      ddq];
+ddq1 = (l*m2*sin(q2)*dq2^2 + u + m2*g*cos(q2)*sin(q2))/(m1+m2*(1 - cos(q2)^2));
+ddq2 = -(l*m2*cos(q2)*sin(q2)*dq2^2 + u*cos(q2)+(m1+m2)*g*sin(q2))...
+        /(l*m1+l*m2*(1 - cos(q2)^2));
+ddq = [ddq1; ddq2];
+dz = [dq; ddq];
 
 f = Function('f', {z, u}, {dz}); % CT dynamics
-
+f2 = Function('f2', {q,dq, u}, {ddq});
 %%% Formulate the NLP
 % decistion variable: w = [1*15 + 4*15 + 1*15, 1] = [T; X; U];
 numDecVar = (1 + size(z, 1) + size(u, 1)) * config.grid.nTrajPts;
@@ -184,8 +174,8 @@ lbz = [lbz; bounds.state.lower];     % concatenated state lower bound
 ubz = [ubz; bounds.state.upper];     % concatenated state upper bound
 
 g = [g;zk];                     % add init state bounds to g
-lbg = [lbg; zeros(4,1)];        % add lower bound for init state
-ubg = [ubg; zeros(4,1)];        % add upper bound for init state
+lbg = [lbg; initState];        % add lower bound for init state
+ubg = [ubg; initState];        % add upper bound for init state
 
 
 
@@ -218,8 +208,8 @@ for k = 2 : config.grid.nTrajPts
 end
 % add final state bounded
 g = [g; zk];
-lbg = [lbg;0;pi;0;0];
-ubg = [ubg;0;pi;0;0];
+lbg = [lbg;finalState];
+ubg = [ubg;finalState];
 
 % concatenate all decVar
 w = [decVar_T; decVar_Z; decVar_U];
@@ -241,9 +231,12 @@ dim.nControl = [1, config.grid.nTrajPts];
 % Post-processing:
 [t,soln.state,soln.control] = unPackDecVar(w_opt,dim);
 soln.time = linspace(t(1),t(2),config.grid.nTrajPts);
+soln.configuration = soln.state(1:2,:);
+soln.dConfiguration = soln.state(3:4,:);
 tSoln = soln.time;
 xSoln = soln.state;
 uSoln = soln.control;
+soln.ddConfiguration = full(f2(soln.configuration, soln.dConfiguration, soln.control));
 soln.dJ = soln.control.*soln.control;
 soln.objVal = full(sol.f);
 
@@ -253,38 +246,40 @@ soln.interp.control = @(tt)( interp1(tSoln',uSoln',tt')' );
 
 % use piecewise quadratic interpolation for the state
 fSoln = full(f(xSoln, uSoln));
-soln.interp.state = @(t)( bSpline2(tSoln,xSoln,fSoln,t) );
+soln.interp.configuration = @(t)( bSpline2(tSoln,xSoln(1:2,:),fSoln(1:2,:),t) );
+soln.interp.dConfiguration = @(t)( bSpline2(tSoln,xSoln(3:4,:),fSoln(3:4,:),t) );
+soln.interp.ddConfiguration = @(t)(interp1(tSoln',fSoln(3:4,:)',t)');
+soln.interp.state = @(t)( [soln.interp.configuration(t);soln.interp.dConfiguration(t)] );
 
 
-% interpolation for checking collocation constraint along the trjeatory
-%  collocation constraint = ddq(t) - f(q,dq,u) 
 soln.interp.collCst = @(t)(...
-    full(f(soln.interp.state(t), soln.interp.control(t)))...
-    - interp1(tSoln', fSoln',t)' );
-soln.interp.objCst = @(t)(interp1(tSoln',(uSoln.*uSoln)',t) - soln.interp.control(t).*soln.interp.control(t));
+     soln.interp.dConfiguration(t) - interp1(tSoln',fSoln(1:2,:)',t)');
+
+soln.interp.objCst = @(t)(interp1(tSoln',(uSoln.*uSoln)',t) ...
+    - soln.interp.control(t).*soln.interp.control(t));
 
 % use romberg quadrature to estimate the absolute dynamic error
 absColErr = @(t)(abs(soln.interp.collCst(t)));
 nSegment = config.grid.nTrajPts-1;
-nState = size(xSoln,1);
+nState = size(q,1);
 quadTol = 1e-12;   %Compute quadrature to this tolerance  
-soln.info.error = zeros(nState,nSegment);
+soln.info.dynError = zeros(nState,nSegment);
 for i=1:nSegment
-    soln.info.error(:,i) = rombergQuadrature(absColErr,tSoln([i,i+1]),quadTol);
+    soln.info.dynError(:,i) = rombergQuadrature(absColErr,tSoln([i,i+1]),quadTol);
 end
-soln.info.maxError = max(max(soln.info.error));
+soln.info.maxdynError = max(max(soln.info.dynError));
 
 
 % use romberg quadrature to estimate the absolute objective error
 absObjErr = @(t)(abs(soln.interp.objCst(t)));
 nSegment = config.grid.nTrajPts-1;
-nState = 1;
+nObj = 1;
 quadTol = 1e-12;   %Compute quadrature to this tolerance  
-soln.info.objError = zeros(nState,nSegment);
+soln.info.objError = zeros(nObj,nSegment);
 for i=1:nSegment
     soln.info.objError(:,i) = rombergQuadrature(absObjErr,tSoln([i,i+1]),quadTol);
 end
-soln.info.maxObjError = max(max(soln.info.error));
+soln.info.maxObjError = max(max(soln.info.objError));
 
 
 % plot the animation
@@ -293,47 +288,12 @@ P.speed = 0.7;
 P.figNum = 102;
 t = linspace(tSoln(1),tSoln(end),100000);
 z = soln.interp.state(t);
-% animate(t,z,P)
-
-% Plot the results:
-figure(101); clf; plotTraj(soln,config);
-
-%%%% Show the error in the collocation constraint between grid points:
-%
-if plotError
-    % Then we can plot an estimate of the error along the trajectory
-    figure(5); clf;
-    
-    % NOTE: the following commands have only been implemented for the direct
-    % collocation(trapezoid, hermiteSimpson) methods, and will not work for
-    % chebyshev or rungeKutta methods.
-    cc = soln.interp.collCst(t);
-    
-    subplot(2,2,1);
-    plot(t,cc(3,:))
-    title('Collocation Error:   dx/dt - f(t,x,u)')
-    ylabel('d/dt cart position')
-    
-%     subplot(2,2,3);
-%     plot(t,cc(4,:))
-%     xlabel('time')
-%     ylabel('d/dt pole angle')
-%     
-    idx = 1:length(soln.info.error);
-    subplot(2,2,2); hold on;
-    plot(idx,soln.info.objError(1,:),'ko');
-    title('State Error')
-    ylabel('cart position')
-    
-%     subplot(2,2,4); hold on;
-%     plot(idx,soln.info.error(4,:),'ko');
-%     xlabel('segment index')
-%     ylabel('pole angle');
+if config.flag.animationOn
+   animate(t,z,P)
 end
+
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-
-
-
+end
