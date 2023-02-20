@@ -6,6 +6,7 @@ function soln = generalTrapezoidMethod(config)
 % it uses augumented state to cast second-order system into a first-order 
 % form.
 %
+% implement as functio
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Problem description
 %
@@ -18,7 +19,7 @@ function soln = generalTrapezoidMethod(config)
 %
 %   objective:
 %       L = u^2
-
+%
 %
 %   Parameters:
 %       .m1 = cart mass
@@ -48,39 +49,7 @@ function soln = generalTrapezoidMethod(config)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Direction collocation formulation:
 % Trapezoid method:
-%   Assume dynamics and control are linear between grid points 
-%   
-%   Trapezoidal rule (left and right Rieman sums):
-%       \int_a^b f(x)dx = (b-a)*0.5*(f(a) + f(b))
-%
-%   Decision variable:
-%       w = [2 + 4*15 + 1*15, 1] = [t0; tf; X; U];
-%   
-%   Bounded contraints (as above):
-%       
-%   defect constraints (by trapezoidal rule):
-%       xk+1 = xk + hk/2(fk+1 + fk)
-%
-%   objective:
-%       L = u^2
-%       J = \int u(t)^2dt   continuous form
-%       J = \sum hk/2(uk + uk+1) discreted form by trapezoid quadrature
-%
-%   Parameters:
-%       .m1 = cart mass
-%       .m2 = pendulum point-mass
-%       .g = gravity
-%       .l = length of the pendulum
-%     
-%   System dynamics:
-%       dx0 = (1 - x2^2)*x1 - x2 + u
-%       dx1 = x0
-%
-%   Constraints:
-%       bounded control input 
-%       bounded position
-%       bounded time
-%
+%   See paper Section-III
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Setup casadi solver 
 addpath(genpath("D:\software\casadi-windows-matlabR2016a-v3.5.5"))

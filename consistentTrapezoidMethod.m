@@ -1,25 +1,29 @@
 function soln = consistentTrapezoidMethod(config)
-% main_casadi.m
+% consistentTrapezoidMethod.m
 %
 % This script runs consistent direct collocation methods for trajectory
 % optimization (trapazoid) with casadi framework
 %
-% it uses two algebra equations to approximate system dynamic constraints
-% and approximate the more p
-%
+% implement as functio
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Problem description
 %
 % Cartpole swing up: 
-%   State:
-%       z = [4, 1] = state vector = [x;q;dx;dq]
-%   
+%   configuration:
+%       q = [2, 1] = configuration vector = [q1,q2]
+%       q1: postion of cart (m)
+%       q2: angle of pole (rad)
+%
+%   first-order derivative of configuration
+%       dq = [2, 1] = [dq1,dq2]
+%       dq1: velocity of cart (m/s)
+%       dq2: angular velocity of pole (rad/s)
+%
 %   Control:
 %       u = [1, 1] = actuation vector = F = force on cart
 %
 %   objective:
 %       L = u^2
-
 %
 %   Parameters:
 %       .m1 = cart mass
@@ -28,59 +32,23 @@ function soln = consistentTrapezoidMethod(config)
 %       .l = length of the pendulum
 %     
 %   System dynamics:
-%       dz = f(z, u)
-%       dz(1) = z(3)  % first order
-%       dz(2) = z(4)  % first order
-%       dz(3) = ddx
-%       dz(4) = ddq
-%       ddx = l*m2*sin(q)*dq2^2 + u + m2*g*cos(q)*sin(q)/(m1+m2*(1 - cos(q)^2))
-%       ddq = -(l*m2*cos(q)*sin(q)*dq2^2 + u*cos(q)+(m1+m2)*g*sin(q))/(l*m1+l*m2*(1 - cos(q)^2))
-%
+%       ddq = g(q, dq, u)
+%       ddq1 = (l*m2*sin(q2)*dq2^2 + u + m2*g*cos(q2)*sin(q2))/(m1+m2*(1 - cos(q2)^2));
+%       ddq2 = -(l*m2*cos(q2)*sin(q2)*dq2^2 + u*cos(q2)+(m1+m2)*g*sin(q2)) /(l*m1+l*m2*(1 - cos(q2)^2));
 %
 %   Constraints:
-%       -49 <= u <= 49      bounded control input 
-%       -1 <= x <= 1        bounded position
-%       0 <= tf - t0 <= x   bounded duration 
-%       z_init = [0,0,0,0]  init state constraint
-%       z_f = [0,pi,0,0]    final state constraint
+%       -umax <= u <= umax      bounded control input 
+%       -q1max <= x <= q1max    bounded position
+%       0 <= tf - t0 <= x       bounded duration 
+%       z_init = [0,0,0,0]      init state constraint
+%       z_f = [0,pi,0,0]        final state constraint
 %
 %   No of grid points:
 %       N = 15
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Direction collocation formulation:
+% Consisent Direction collocation formulation:
 % Trapezoid method:
-%   Assume dynamics and control are linear between grid points 
-%   
-%   Trapezoidal rule (left and right Rieman sums):
-%       \int_a^b f(x)dx = (b-a)*0.5*(f(a) + f(b))
-%
-%   Decision variable:
-%       w = [2 + 4*15 + 1*15, 1] = [t0; tf; X; U];
-%   
-%   Bounded contraints (as above):
-%       
-%   defect constraints (by trapezoidal rule):
-%       xk+1 = xk + hk/2(fk+1 + fk)
-%
-%   objective:
-%       L = u^2
-%       J = \int u(t)^2dt   continuous form
-%       J = \sum hk/2(uk + uk+1) discreted form by trapezoid quadrature
-%
-%   Parameters:
-%       .m1 = cart mass
-%       .m2 = pendulum point-mass
-%       .g = gravity
-%       .l = length of the pendulum
-%     
-%   System dynamics:
-%       dx0 = (1 - x2^2)*x1 - x2 + u
-%       dx1 = x0
-%
-%   Constraints:
-%       bounded control input 
-%       bounded position
-%       bounded time
+%   See paper Section IV-C
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Setup casadi solver 

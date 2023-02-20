@@ -32,7 +32,7 @@ config.flag.animationOn = 0;
 %%% Get the result 
 % Kelly's Trapozoid
 generalSoln = generalTrapezoidMethod(config);
-a =1
+
 % consistent trapezoid
 consistentSoln = consistentTrapezoidMethod(config);
 
@@ -62,22 +62,22 @@ figure(105); clf;
 plot(t,genDynErrorSum(1,:))
 hold on;
 plot(t, conDynErrorSum(1,:));
-legend('Kelly', 'Our','Interpreter','latex')
+legend("Kelly's", 'Ours','Interpreter','latex')
 hold off
-title('System dynamic error','Interpreter','latex')
+% title('System dynamic error','Interpreter','latex')
 ylabel('$\varepsilon_{sd}(t)$','Interpreter','latex','FontSize',16)
-xlabel('t','Interpreter','latex','FontSize',16)
+xlabel('$t$','Interpreter','latex','FontSize',16)
 
 % plot system dynamic error of each time interval
 figure (106);clf;
 plot(idx,genDynErrorIntervalSum(1,:),'o')
 hold on;
 plot(idx, conDynErrorIntervalSum(1,:),'o');
-legend('Kelly', 'Our','Interpreter','latex')
+legend("Kelly's", 'Ours','Interpreter','latex')
 hold off
-title('System dynamic error in each time interval','Interpreter','latex','FontSize',16)
+% title('System dynamic error in each time interval','Interpreter','latex','FontSize',16)
 ylabel('$\eta_{sd}(t)$','Interpreter','latex','FontSize',16)
-xlabel('t','Interpreter','latex','FontSize',16)
+xlabel('$t$','Interpreter','latex','FontSize',16)
 
 % plot system dynamic error of each time interval
 figure (107);clf;
@@ -86,45 +86,9 @@ conObjCst = consistentSoln.interp.objCst(t);
 plot(t, genObjCst(1,:));
 hold on
 plot(t, conObjCst(1,:));
-legend('Kelly', 'Our','Interpreter','latex')
-title('Objective approximation error','Interpreter','latex')
+legend("Kelly's", 'Ours','Interpreter','latex')
+% title('Objective approximation error','Interpreter','latex')
 ylabel('$\varepsilon_{obj}(t)$','Interpreter','latex','FontSize',16)
-xlabel('t','Interpreter','latex','FontSize',16)
+xlabel('$t$','Interpreter','latex','FontSize',16)
 
-return
-subplot(2,2,3);
-plot(t,generalCC(2,:))
-hold on;
-plot(t, consistentCC(2,:));
-legend('general', 'Consistent','Interpreter','latex')
-xlabel('time')
-ylabel('d/dt pole angle')
 
-idx = 1:length(generalSoln.info.objError);
-subplot(2,2,2); hold on;
-plot(idx,generalSoln.info.dynError(1,:),'bo');
-plot(idx, consistentSoln.info.dynError(1,:),'ro')
-hold off
-legend('general', 'Consistent','Interpreter','latex')
-title('State Error')
-ylabel('cart position')
-
-subplot(2,2,4); hold on;
-plot(idx,generalSoln.info.dynError(2,:),'bo');
-plot(idx,consistentSoln.info.dynError(2,:),'ro');
-hold off
-legend('general', 'Consistent','Interpreter','latex')
-xlabel('segment index')
-ylabel('pole angle');
-
-figure(106); clf;
-oc = generalSoln.interp.objCst(t);
-subplot(1,2,1);
-plot(t, oc(1,:));
-title('Objective Approximation Error: ')
-ylabel('d/dt cart position')
-
-subplot(1,2,2); hold on;
-plot(idx,generalSoln.info.objError(1,:),'ko');
-title('State Error')
-ylabel('cart position')

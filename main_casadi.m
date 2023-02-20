@@ -17,7 +17,7 @@
 %
 %   objective:
 %       L = u^2
-
+%
 %
 %   Parameters:
 %       .m1 = cart mass
@@ -47,39 +47,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Direction collocation formulation:
 % Trapezoid method:
-%   Assume dynamics and control are linear between grid points 
-%   
-%   Trapezoidal rule (left and right Rieman sums):
-%       \int_a^b f(x)dx = (b-a)*0.5*(f(a) + f(b))
-%
-%   Decision variable:
-%       w = [2 + 4*15 + 1*15, 1] = [t0; tf; X; U];
-%   
-%   Bounded contraints (as above):
-%       
-%   defect constraints (by trapezoidal rule):
-%       xk+1 = xk + hk/2(fk+1 + fk)
-%
-%   objective:
-%       L = u^2
-%       J = \int u(t)^2dt   continuous form
-%       J = \sum hk/2(uk + uk+1) discreted form by trapezoid quadrature
-%
-%   Parameters:
-%       .m1 = cart mass
-%       .m2 = pendulum point-mass
-%       .g = gravity
-%       .l = length of the pendulum
-%     
-%   System dynamics:
-%       dx0 = (1 - x2^2)*x1 - x2 + u
-%       dx1 = x0
-%
-%   Constraints:
-%       bounded control input 
-%       bounded position
-%       bounded time
-%
+%   See paper Section-III
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 clc; clear;
 %%% Setup casadi solver 
@@ -87,7 +55,7 @@ addpath(genpath("D:\software\casadi-windows-matlabR2016a-v3.5.5"))
 import casadi.*
 
 % flag
-singleTimeDV = 1;
+singleTimeDV = 1; % 0 is worng currently
 plotError = 1;
 
 % Number of points for initialization:
@@ -293,7 +261,7 @@ P.speed = 0.7;
 P.figNum = 102;
 t = linspace(tSoln(1),tSoln(end),100000);
 z = soln.interp.state(t);
-% animate(t,z,P)
+animate(t,z,P)
 
 % Plot the results:
 figure(101); clf; plotTraj(soln,config);
