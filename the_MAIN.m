@@ -70,14 +70,15 @@ xlabel('$t$','Interpreter','latex','FontSize',16)
 
 % plot system dynamic error of each time interval
 figure (106);clf;
-plot(idx,genDynErrorIntervalSum(1,:),'o')
+scatter(idx,genDynErrorIntervalSum(1,:),'o','filled')
+box on;
 hold on;
-plot(idx, conDynErrorIntervalSum(1,:),'o');
+scatter(idx, conDynErrorIntervalSum(1,:),'o');
 legend("Kelly's", 'Ours','Interpreter','latex')
 hold off
 % title('System dynamic error in each time interval','Interpreter','latex','FontSize',16)
 ylabel('$\eta_{sd}(t)$','Interpreter','latex','FontSize',16)
-xlabel('$t$','Interpreter','latex','FontSize',16)
+xlabel('$k$','Interpreter','latex','FontSize',16)
 
 % plot system dynamic error of each time interval
 figure (107);clf;
