@@ -54,41 +54,25 @@ function soln = generalTrapezoidMethod(config)
 %%% Setup casadi solver 
 addpath(genpath("D:\software\casadi-windows-matlabR2016a-v3.5.5"))
 import casadi.*
-
+addpath("models\")
 % flag
 singleTimeDV = 1;
 plotError = 0;
 
+% get cartpole model
+model = cartPoleModel(config);
+nState = model.dim.nState;
+nControl = model.dim.nControl;
+nConfig = model.dim.nConfig;
+f = model.CTDynamic.evaluation.firstOrder;
+f2 = model.CTDynamic.evaluation.secondOrder;
+
 % get problem configuration
-g = config.dyn.g;
-l = config.dyn.l;
-m1 = config.dyn.m1;
-m2 = config.dyn.m2;
 bounds = config.bounds;
 initState = config.initState;
 finalState = config.finalState;
 
-%%% Declare model variables
-q1 = MX.sym('q1');    % cart position
-q2 = MX.sym('q2');    % pole angle
-dq1 = MX.sym('dq1');  % cart velocity
-dq2 = MX.sym('dq2');  % pole angular rate
-q = [q1; q2];         % configuration vector
-dq = [dq1; dq2];      % first time-deriviative of configuration        
-u = MX.sym('u');    % control input: force on car
-z = [q;dq];
-%%% Model equations: continuous system dynamics
-ddq1 = (l*m2*sin(q2)*dq2^2 + u + m2*g*cos(q2)*sin(q2))/(m1+m2*(1 - cos(q2)^2));
-ddq2 = -(l*m2*cos(q2)*sin(q2)*dq2^2 + u*cos(q2)+(m1+m2)*g*sin(q2))...
-        /(l*m1+l*m2*(1 - cos(q2)^2));
-ddq = [ddq1; ddq2];
-dz = [dq; ddq];
-
-f = Function('f', {z, u}, {dz}); % CT dynamics
-f2 = Function('f2', {q,dq, u}, {ddq});
 %%% Formulate the NLP
-% decistion variable: w = [1*15 + 4*15 + 1*15, 1] = [T; X; U];
-numDecVar = (1 + size(z, 1) + size(u, 1)) * config.grid.nTrajPts;
 if singleTimeDV
     w0 = [config.guess.time(1);
           config.guess.time(end);
@@ -230,9 +214,9 @@ soln.interp.objCst = @(t)(interp1(tSoln',(uSoln.*uSoln)',t) ...
 % use romberg quadrature to estimate the absolute dynamic error
 absColErr = @(t)(abs(soln.interp.collCst(t)));
 nSegment = config.grid.nTrajPts-1;
-nState = size(q,1);
+nState = size(nConfig,1);
 quadTol = 1e-12;   %Compute quadrature to this tolerance  
-soln.info.dynError = zeros(nState,nSegment);
+soln.info.dynError = zeros(nConfig,nSegment);
 for i=1:nSegment
     soln.info.dynError(:,i) = rombergQuadrature(absColErr,tSoln([i,i+1]),quadTol);
 end

@@ -27,11 +27,11 @@ config.initState = zeros(4,1);
 config.finalState = [0, pi, 0, 0]';
 
 % flag
-config.flag.animationOn = 0;
+config.flag.animationOn = 1;
 
 %%% Get the result 
 % Kelly's Trapozoid
-generalSoln = generalTrapezoidMethod(config);
+% generalSoln = generalTrapezoidMethod(config);
 
 % consistent trapezoid
 consistentSoln = consistentTrapezoidMethod(config);
