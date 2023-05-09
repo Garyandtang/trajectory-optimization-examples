@@ -126,7 +126,7 @@ ubu = [ubu; bounds.control.upper];   % concatenated control upper bound
 lbz = [lbz; bounds.state.lower];     % concatenated state lower bound 
 ubz = [ubz; bounds.state.upper];     % concatenated state upper bound
 
-g = [g;zk];                     % add init state bounds to g
+g = [g; zk];                     % add init state bounds to g
 lbg = [lbg; initState];        % add lower bound for init state
 ubg = [ubg; initState];        % add upper bound for init state
 
