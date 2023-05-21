@@ -1,6 +1,7 @@
 function soln = consistentTrapzoidMethod(problem, objApproximation)
 import casadi.*
 addpath("..")
+addpath("../");
 %%% first-order method
 % get block move model
 model = problem.model;
@@ -15,6 +16,7 @@ finalState = problem.constraints.boundarys.finalState;
 finalTime = problem.constraints.boundarys.finalTime;
 
 f = model.CTDynamic.evaluation.secondOrder; % this is 2nd-order dynamics
+f1 = model.CTDynamic.evaluation.firstOrder;
 dt = finalTime / (nTrajPts - 1);
 control.lower = problem.constraints.bounds.control.lower;
 control.upper = problem.constraints.bounds.control.upper;
@@ -22,7 +24,7 @@ state.lower = problem.constraints.bounds.state.lower;
 state.upper = problem.constraints.bounds.state.upper;
 
 w0 = ones((nTrajPts)*(nControl+nState),1);
-
+tic
 %%% Formulate the NLP
 % define nlp container
 nlpConstainer.obj = 0;
@@ -105,11 +107,11 @@ solver = nlpsol('solver', 'ipopt', prob);
 % Solve the NLP
 sol = solver('x0', w0, 'lbx', lbw, 'ubx', ubw, 'lbg', lbg, 'ubg', ubg);
 w_opt = full(sol.x);
-
+toc
 % pack the result
 dim.nState = [nState, nTrajPts];
 dim.nControl = [nControl, nTrajPts];
-[~, xSoln, uSoln] = unpackDecVarBM(w_opt,dim);
+[~, xSoln, uSoln] = unpackDecVar(w_opt,dim);
 tSoln = linspace(0, finalTime, nTrajPts);
 soln.tSoln = tSoln;
 soln.qSoln = xSoln(1:nConfig,:);
@@ -117,21 +119,34 @@ soln.dqSoln = xSoln(nConfig+1:end,:);
 soln.uSoln = uSoln;
 
 ddqSoln = full(f(soln.qSoln, soln.dqSoln, uSoln));
-soln.interp.u = @(tt)( interp1(tSoln',uSoln',tt')' );
-soln.interp.dq = @(tt)(bSpline2(tSoln, soln.dqSoln, ddqSoln,tt));
-soln.interp.q = @(tt)(bSpline3(tSoln, soln.qSoln, soln.dqSoln, ddqSoln,tt));
+soln.interp.u = @(t)( interp1(tSoln',uSoln',t')' );
+soln.interp.ddq = @(t)(interp1(tSoln', ddqSoln',t')');
+soln.interp.dq = @(t)(bSpline2(tSoln, soln.dqSoln, ddqSoln,t));
+soln.interp.q = @(t)(bSpline3(tSoln, soln.qSoln, soln.dqSoln, ddqSoln,t));
+soln.interp.x = @(t)([soln.interp.q(t);soln.interp.dq(t)]);
 
-soln.optimalSoln.q = @(tt)(3.*tt.^2-2.*tt.^3);
+soln.interp.sysDymError = @(t)(full(f1(soln.interp.x(t),soln.interp.u(t)))- ...
+                               [soln.interp.dq(t);soln.interp.ddq(t)]);
 
-soln.interp.configError = @(t)(soln.interp.q(t) - soln.optimalSoln.q(t));
-soln.interp.sysDymError = @(t)(full(f(soln.interp.q(t),soln.interp.dq(t),soln.interp.u(t)))- ...
-                               interp1(tSoln', ddqSoln',t')');
 % use romberg quadrature to estimate the absolute dynamic error
-absConfigError = @(t)(abs(soln.interp.configError(t)));
+absSysDymError = @(t)(abs(soln.interp.sysDymError(t)));
 nSegment = nTrajPts-1;
-quadTol = 1e-15;   %Compute quadrature to this tolerance  
-soln.info.dynError = zeros(nConfig,nSegment);
+quadTol = 1e-12;   %Compute quadrature to this tolerance  
+% soln.info.dynError = zeros(nConfig,nSegment);
 for i=1:nSegment
-    soln.info.configError(:,i) = rombergQuadrature(absConfigError,tSoln([i,i+1]),quadTol);
+    soln.info.sysDymError(:,i) = rombergQuadrature(absSysDymError,tSoln([i,i+1]),quadTol);
 end
+config.dyn.g = 9.81;
+config.dyn.l = 1;
+config.dyn.m1 = 1;
+config.dyn.m2 = 0.1;
+P.plotFunc = @(t,z)( drawCartPole(t,z,config.dyn) );
+P.speed = 0.7;
+P.figNum = 102;
+t = linspace(soln.tSoln(1),soln.tSoln(end),250);
+z = soln.interp.x(t);
+if 0
+   animate(t,z,P)
+end
+
 end

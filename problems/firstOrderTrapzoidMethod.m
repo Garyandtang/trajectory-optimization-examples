@@ -1,4 +1,4 @@
-function soln = firstOrderTrapzoidMethod(problem)
+function soln = firstOrderTrapzoidMethod(problem, objAppro)
 import casadi.*
 %%% first-order method
 % get block move model
@@ -50,18 +50,23 @@ end
 % defect constraints and objective value
 for i = 2 : nTrajPts
     ukPrev = nlpConstainer.decVar.U(:, i-1);
-    uk = nlpConstainer.decVar.U(:, i-1);
+    uk = nlpConstainer.decVar.U(:, i);
     zkPrev = nlpConstainer.decVar.Z(:, i-1);
     zk = nlpConstainer.decVar.Z(:, i);
     dzkPrev = f(zkPrev, ukPrev);
     dzk = f(zk, uk);
     % calcuate defect constraints besed on trapezoidal rule
-    g1 = zk - zkPrev - dt/2*(dzk + zkPrev);
+    g1 = zk - zkPrev - dt/2*(dzk + dzkPrev);
     nlpConstainer.constraints.g = [nlpConstainer.constraints.g; g1];
     nlpConstainer.constraints.lbg = [nlpConstainer.constraints.lbg; zeros(nState, 1)];
     nlpConstainer.constraints.ubg = [nlpConstainer.constraints.ubg; zeros(nState,1)];
     % calculate cost function by tapezoidal rule
-    nlpConstainer.obj = nlpConstainer.obj + dt*(ukPrev^2 +ukPrev*uk+ uk^2)/3;
+    if (objAppro == 1)
+        nlpConstainer.obj = nlpConstainer.obj + dt*(ukPrev^2 + uk^2)/2;
+    else
+        nlpConstainer.obj = nlpConstainer.obj + dt*(ukPrev^2 + ukPrev*uk + uk^2)/3;
+    end
+    
 end
 
 % other constraints
@@ -93,5 +98,36 @@ solver = nlpsol('solver', 'ipopt', prob);
 sol = solver('x0', w0, 'lbx', lbw, 'ubx', ubw, 'lbg', lbg, 'ubg', ubg);
 w_opt = full(sol.x);
 
-soln = w_opt;
+% pack the result
+dim.nState = [nState, nTrajPts];
+dim.nControl = [nControl, nTrajPts];
+[~, xSoln, uSoln] = unpackDecVarBM(w_opt,dim);
+tSoln = linspace(0, finalTime, nTrajPts);
+soln.tSoln = tSoln;
+soln.qSoln = xSoln(1:nConfig,:);
+soln.dqSoln = xSoln(nConfig+1:end,:);
+soln.uSoln = uSoln;
+
+dxSoln = full(f(xSoln, uSoln));
+
+ddqSoln = dxSoln(nConfig+1:end, :);
+
+soln.interp.dq = @(tt)(bSpline2(tSoln, soln.dqSoln, ddqSoln,tt));
+soln.interp.q = @(tt)(bSpline2(tSoln, soln.qSoln, soln.dqSoln,tt));
+soln.interp.x = @(t)([soln.interp.q(t);soln.interp.dq(t)]);
+soln.interp.u = @(tt)( interp1(tSoln',uSoln',tt')' );
+soln.optimalSoln.q = @(tt)(3.*tt.^2-2.*tt.^3);
+
+soln.interp.configError = @(t)(soln.interp.q(t) - soln.optimalSoln.q(t));
+soln.interp.sysDymError = @(t)(full(f(soln.interp.x(t),soln.interp.u(t)))- ...
+                               interp1(tSoln', [soln.dqSoln;ddqSoln]',t')');
+
+% use romberg quadrature to estimate the absolute dynamic error
+absConfigError = @(t)(abs(soln.interp.configError(t)));
+nSegment = nTrajPts-1;
+quadTol = 1e-12;   %Compute quadrature to this tolerance  
+soln.info.dynError = zeros(nConfig,nSegment);
+for i=1:nSegment
+    soln.info.configError(:,i) = rombergQuadrature(absConfigError,tSoln([i,i+1]),quadTol);
+end
 end

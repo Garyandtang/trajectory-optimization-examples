@@ -10,7 +10,7 @@ if (~exist('config'))
 else
     % get model configuration
     g = config.dyn.g;
-    l = config.dyn.l;isempty(fieldnames(config))
+    l = config.dyn.l;
     m1 = config.dyn.m1;
     m2 = config.dyn.m2;
 end

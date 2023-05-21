@@ -64,6 +64,7 @@ model = cartPoleModel(config);
 nState = model.dim.nState;
 nControl = model.dim.nControl;
 nConfig = model.dim.nConfig;
+nTrajPts = config.grid.nTrajPts;
 f = model.CTDynamic.evaluation.firstOrder;
 f2 = model.CTDynamic.evaluation.secondOrder;
 
@@ -135,7 +136,7 @@ ubg = [ubg; initState];        % add upper bound for init state
 J = 0;
 % decision variable on path z and u and bounded contraints + defect
 % constraints
-dt = (decVar_T(2) - decVar_T(1)) / (config.grid.nTrajPts - 1);
+dt = 4 / (nTrajPts - 1);
 for k = 2 : config.grid.nTrajPts
     zk_prev = zk;
     uk_prev = uk;
@@ -182,57 +183,36 @@ dim.nState = [4, config.grid.nTrajPts];
 dim.nControl = [1, config.grid.nTrajPts];
 
 % Post-processing:
-[t,soln.state,soln.control] = unPackDecVar(w_opt,dim);
-soln.time = linspace(t(1),t(2),config.grid.nTrajPts);
-soln.configuration = soln.state(1:2,:);
-soln.dConfiguration = soln.state(3:4,:);
-tSoln = soln.time;
-xSoln = soln.state;
-uSoln = soln.control;
-soln.ddConfiguration = full(f2(soln.configuration, soln.dConfiguration, soln.control));
-soln.dJ = soln.control.*soln.control;
-soln.objVal = full(sol.f);
+[t,xSoln,uSoln] = unPackDecVar(w_opt,dim);
+tSoln = linspace(t(1),t(2),config.grid.nTrajPts);
+soln.tSoln = tSoln;
+soln.qSoln = xSoln(1:nConfig,:);
+soln.dqSoln = xSoln(nConfig+1:end,:);
+soln.uSoln = uSoln;
 
-soln.exitFlag = 1;
-soln.interp.state = @(tt)( interp1(tSoln',xSoln',tt')' );
-soln.interp.control = @(tt)( interp1(tSoln',uSoln',tt')' );
+dxSoln = full(f(xSoln, uSoln));
+ddqSoln = dxSoln(nConfig+1:end, :);
+soln.interp.dq = @(tt)(bSpline2(tSoln, soln.dqSoln, ddqSoln,tt));
+soln.interp.q = @(tt)(bSpline2(tSoln, soln.qSoln, soln.dqSoln,tt));
+% soln.interp.q = @(tt)(bSpline3(tSoln, soln.qSoln, soln.dqSoln, ddqSoln,tt));
+soln.interp.x = @(t)([soln.interp.q(t);soln.interp.dq(t)]);
+soln.interp.u = @(tt)( interp1(tSoln',uSoln',tt')' );
+soln.interp.sysDymError = @(t)(full(f(soln.interp.x(t),soln.interp.u(t)))- ...
+                               interp1(tSoln', [soln.dqSoln;ddqSoln]',t')');
 
-% use piecewise quadratic interpolation for the state
-fSoln = full(f(xSoln, uSoln));
-soln.interp.configuration = @(t)( bSpline2(tSoln,xSoln(1:2,:),fSoln(1:2,:),t) );
-soln.interp.dConfiguration = @(t)( bSpline2(tSoln,xSoln(3:4,:),fSoln(3:4,:),t) );
-soln.interp.ddConfiguration = @(t)(interp1(tSoln',fSoln(3:4,:)',t)');
-soln.interp.state = @(t)( [soln.interp.configuration(t);soln.interp.dConfiguration(t)] );
-
-
-soln.interp.collCst = @(t)(...
-     soln.interp.dConfiguration(t) - interp1(tSoln',fSoln(1:2,:)',t)');
-
-soln.interp.objCst = @(t)(interp1(tSoln',(uSoln.*uSoln)',t) ...
-    - soln.interp.control(t).*soln.interp.control(t));
+% soln.interp.sysDs               - interp1(tSoln', ddqSoln',t')')
 
 % use romberg quadrature to estimate the absolute dynamic error
-absColErr = @(t)(abs(soln.interp.collCst(t)));
-nSegment = config.grid.nTrajPts-1;
-nState = size(nConfig,1);
+absSysDymError = @(t)(abs(soln.interp.sysDymError(t)));
+nSegment = nTrajPts-1;
 quadTol = 1e-12;   %Compute quadrature to this tolerance  
-soln.info.dynError = zeros(nConfig,nSegment);
+soln.info.collCst = zeros(nState,nSegment);
 for i=1:nSegment
-    soln.info.dynError(:,i) = rombergQuadrature(absColErr,tSoln([i,i+1]),quadTol);
+    soln.info.collCst(:,i) = rombergQuadrature(absSysDymError,tSoln([i,i+1]),quadTol);
 end
-soln.info.maxdynError = max(max(soln.info.dynError));
 
 
-% use romberg quadrature to estimate the absolute objective error
-absObjErr = @(t)(abs(soln.interp.objCst(t)));
-nSegment = config.grid.nTrajPts-1;
-nObj = 1;
-quadTol = 1e-12;   %Compute quadrature to this tolerance  
-soln.info.objError = zeros(nObj,nSegment);
-for i=1:nSegment
-    soln.info.objError(:,i) = rombergQuadrature(absObjErr,tSoln([i,i+1]),quadTol);
-end
-soln.info.maxObjError = max(max(soln.info.objError));
+
 
 
 % plot the animation
@@ -240,7 +220,7 @@ P.plotFunc = @(t,z)( drawCartPole(t,z,config.dyn) );
 P.speed = 0.7;
 P.figNum = 102;
 t = linspace(tSoln(1),tSoln(end),100000);
-z = soln.interp.state(t);
+z = soln.interp.x(t);
 if config.flag.animationOn
    animate(t,z,P)
 end

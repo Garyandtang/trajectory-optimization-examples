@@ -64,6 +64,7 @@ model = cartPoleModel(config);
 nState = model.dim.nState;
 nControl = model.dim.nControl;
 nConfig = model.dim.nConfig;
+nTrajPts = config.grid.nTrajPts;
 f = model.CTDynamic.evaluation.secondOrder;
 
 % get problem configuration
@@ -73,17 +74,10 @@ finalState = config.finalState;
 
 %%% Formulate the NLP
 % decistion variable: w = [1*15 + 4*15 + 1*15, 1] = [T; X; U];
-if singleTimeDV
-    w0 = [config.guess.time(1);
-          config.guess.time(end);
-          reshape(config.guess.state,numel(config.guess.state), 1);
-          reshape(config.guess.control,numel(config.guess.control), 1)];
-else
-    w0 = [reshape(config.guess.time, numel(config.guess.time), 1);
-          reshape(config.guess.state,numel(config.guess.state), 1);
-          reshape(config.guess.control,numel(config.guess.control), 1)];
-end
-
+w0 = [config.guess.time(1);
+      config.guess.time(end);
+      reshape(config.guess.state,numel(config.guess.state), 1);
+      reshape(config.guess.control,numel(config.guess.control), 1)];
 % declare decision variables and constraints
 decVar_T = [];  % all declare decision on time
 decVar_Z = [];  % all declare decision on state
@@ -99,21 +93,9 @@ lbg = [];       % all lower bounds on g
 ubg = [];       % all upper bounds on g
 
 % decision variable on T and bounded time constaints
-if singleTimeDV
-    decVar_T = MX.sym('T', 2);
-    lbt = [bounds.initialTime.lower; bounds.finalTime.lower];
-    ubt = [bounds.initialTime.upper; bounds.finalTime.upper];
-else
-    decVar_T = [decVar_T; MX.sym('T', config.grid.nTrajPts)];
-    lbt = [lbt; bounds.initialTime.lower];
-    ubt = [ubt; bounds.initialTime.upper];
-    for i = 1 : (config.grid.nTrajPts - 2)
-        lbt = [lbt; bounds.initialTime.lower];
-        ubt = [ubt; bounds.finalTime.upper];
-    end
-    lbt = [lbt; bounds.finalTime.lower];
-    ubt = [ubt; bounds.finalTime.upper];
-end
+decVar_T = MX.sym('T', 2);
+lbt = [bounds.initialTime.lower; bounds.finalTime.lower];
+ubt = [bounds.initialTime.upper; bounds.finalTime.upper];
 
 % decision variable initial z and u and bounded contraints
 qk = MX.sym(['Q_' num2str(1)], 2);
@@ -136,7 +118,7 @@ ubg = [ubg; initState];        % add upper bound for init state
 J = 0;
 % decision variable on path z and u and bounded contraints + defect
 % constraints
-dt = (decVar_T(2) - decVar_T(1)) / (config.grid.nTrajPts - 1);
+dt = 4 / (nTrajPts - 1);
 for k = 2 : config.grid.nTrajPts
     qk_prev = qk;
     vk_prev = vk;
@@ -186,10 +168,12 @@ dim.nTime = [1, size(decVar_T, 1)];
 dim.nState = [4, config.grid.nTrajPts];
 dim.nControl = [1, config.grid.nTrajPts];
 % Post-processing:
-[t,soln.state,soln.control] = unPackDecVar(w_opt,dim);
-soln.time = linspace(t(1),t(2),config.grid.nTrajPts);
-soln.configuration = soln.state(1:2,:);
-soln.dConfiguration = soln.state(3:4,:);
+[t,xSoln,uSoln] = unPackDecVar(w_opt,dim);
+tSoln = linspace(t(1),t(2),config.grid.nTrajPts);
+soln.tSoln = tSoln;
+soln.qSoln = xSoln(1:nConfig,:);
+soln.dqSoln = xSoln(nConfig+1:end,:);
+soln.uSoln = uSoln;
 soln.objVal = full(sol.f);
 soln.exitFlag = 1;
 % traj.interp.state = @(tt)( interp1(traj.time',traj.state',tt')' );
@@ -197,53 +181,50 @@ soln.interp.control = @(tt)( interp1(soln.time',soln.control',tt')' );
 
 % use piecewise quadratic interpolation first-derivative of configuration
 % use piecewise cubic interpolation for configuration
-soln.ddConfig = full(f(soln.configuration, soln.dConfiguration, soln.control));
-soln.interp.dConfig = @(tt)( bSpline2(soln.time, soln.dConfiguration, ...
-    soln.ddConfig, tt));
-soln.interp.config = @(tt) (bSpline3(soln.time, soln.configuration,...
-    soln.dConfiguration, soln.ddConfig, tt));
-soln.interp.state = @(tt) ([soln.interp.config(tt); soln.interp.dConfig(tt)]);
-soln.interp.ddConfig = @(tt) (interp1(soln.time',soln.ddConfig',tt)');
-
-% interpolation for checking collocation constraint along the trjeatory
-%  collocation constraint = dq(t) - v(t), here v = dq, so it is zeros
-soln.interp.collCst = @(t)(0.*t.*zeros(2,1));
-
-% the result here is zero is that we asume u(t) is a piecewise linear
-% function and we derive the approximated objective function based on
-% u(t), and the objective function just depends on u(t), hence the objCst
-% is zero. In general objective function \int w(u,x,t) dt, for example
-% w = xQx + uRu. Then objCst will not be zero
-soln.interp.objCst = @(t)(t*0);
-
+ddqSoln = full(f(soln.qSoln, soln.dqSoln, uSoln));
+soln.interp.u = @(tt)( interp1(tSoln',uSoln',tt')' );
+soln.interp.dq = @(tt)(bSpline2(tSoln, soln.dqSoln, ddqSoln,tt));
+soln.interp.q = @(tt)(bSpline3(tSoln, soln.qSoln, soln.dqSoln, ddqSoln,tt));
+soln.interp.x = @(t)([soln.interp.q(t);soln.interp.dq(t)]);
+soln.interp.sysDymError = @(t)(full(f(soln.interp.q(t),soln.interp.dq(t),soln.interp.u(t)))- ...
+                               interp1(tSoln', ddqSoln',t')');
 % use romberg quadrature to estimate the absolute dynamic error
-absColErr = @(t)(abs(soln.interp.collCst(t)));
+absSysDymError = @(t)(abs(soln.interp.sysDymError(t)));
 nSegment = config.grid.nTrajPts-1;
-nState = size(soln.configuration,1);
 quadTol = 1e-12;   %Compute quadrature to this tolerance  
-soln.info.dynError = zeros(nState,nSegment);
+soln.info.dynError = zeros(nConfig,nSegment);
 for i=1:nSegment
-    soln.info.dynError(:,i) = rombergQuadrature(absColErr,soln.time([i,i+1]),quadTol);
+    soln.info.dynError(:,i) = rombergQuadrature(absSysDymError,tSoln([i,i+1]),quadTol);
 end
-soln.info.maxError = max(max(soln.info.dynError));
 
-% use romberg quadrature to estimate the absolute objective error
-absObjErr = @(t)(abs(soln.interp.objCst(t)));
-nSegment = config.grid.nTrajPts-1;
-nObj = 1;
-quadTol = 1e-12;   %Compute quadrature to this tolerance  
-soln.info.objError = zeros(nObj,nSegment);
-for i=1:nSegment
-    soln.info.objError(:,i) = rombergQuadrature(absObjErr,soln.time([i,i+1]),quadTol);
-end
-soln.info.maxObjError = max(max(soln.info.objError));
+
+
+
+
+% % the result here is zero is that we asume u(t) is a piecewise linear
+% % function and we derive the approximated objective function based on
+% % u(t), and the objective function just depends on u(t), hence the objCst
+% % is zero. In general objective function \int w(u,x,t) dt, for example
+% % w = xQx + uRu. Then objCst will not be zero
+% soln.interp.objCst = @(t)(t*0);
+% 
+% % use romberg quadrature to estimate the absolute objective error
+% absObjErr = @(t)(abs(soln.interp.objCst(t)));
+% nSegment = config.grid.nTrajPts-1;
+% nObj = 1;
+% quadTol = 1e-12;   %Compute quadrature to this tolerance  
+% soln.info.objError = zeros(nObj,nSegment);
+% for i=1:nSegment
+%     soln.info.objError(:,i) = rombergQuadrature(absObjErr,soln.time([i,i+1]),quadTol);
+% end
+% soln.info.maxObjError = max(max(soln.info.objError));
 
 
 P.plotFunc = @(t,z)( drawCartPole(t,z,config.dyn) );
 P.speed = 0.7;
 P.figNum = 102;
-t = linspace(soln.time(1),soln.time(end),250);
-z = soln.interp.state(t);
+t = linspace(soln.tSoln(1),soln.tSoln(end),250);
+z = soln.interp.x(t);
 if config.flag.animationOn
    animate(t,z,P)
 end

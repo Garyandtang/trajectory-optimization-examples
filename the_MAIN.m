@@ -8,7 +8,7 @@ clc;clear;
 
 %%% provide configuration for dynamic and problem
 % Number of points for initialization:
-config.grid.nTrajPts = 25;
+config.grid.nTrajPts = 50;
 
 % Physical parameters for dynamics
 m1 = 2; config.dyn.m1 = m1;   %cart mass
@@ -24,38 +24,38 @@ config.guess = computeGuess(config);
 % Bounds:
 config.bounds = computeBounds(config);
 config.initState = zeros(4,1);
-config.finalState = [0, pi, 0, 0]';
+config.finalState = [1, pi, 0, 0]';
 
 % flag
-config.flag.animationOn = 1;
+config.flag.animationOn = 0;
 
 %%% Get the result 
 % Kelly's Trapozoid
-% generalSoln = generalTrapezoidMethod(config);
+generalSoln = generalTrapezoidMethod(config);
 
 % consistent trapezoid
 consistentSoln = consistentTrapezoidMethod(config);
 
 %%% Plot the results:
-t = linspace(generalSoln.time(1),generalSoln.time(end),10000);
-z = generalSoln.interp.state(t);
-figure(101); clf; plotTraj(generalSoln,config);
+t = linspace(generalSoln.tSoln(1),generalSoln.tSoln(end),1000);
+z = generalSoln.interp.x(t);
+% figure(101); clf; plotTraj(generalSoln,config);
 
 figure(105); clf;
-generalCC = generalSoln.interp.collCst(t);
-consistentCC = consistentSoln.interp.collCst(t);
+generalCC = generalSoln.interp.sysDymError(t);
+consistentCC = consistentSoln.interp.sysDymError(t);
 
 genDynErrorSum = zeros(1, size(generalCC,2));
 conDynErrorSum = zeros(1, size(consistentCC,2));
-genDynErrorIntervalSum = zeros(1, size(generalSoln.info.objError,2));
-conDynErrorIntervalSum = zeros(1, size(consistentSoln.info.objError,2));
-for i = 1:size(generalCC,1)
-    genDynErrorSum = generalCC(i,:) + genDynErrorSum;
+genDynErrorIntervalSum = zeros(1, size(generalSoln.info.collCst,2));
+conDynErrorIntervalSum = zeros(1, size(consistentSoln.info.dynError,2));
+for i = 1:size(consistentCC,1)
+    genDynErrorSum = generalCC(2+i,:) + genDynErrorSum;
     conDynErrorSum = consistentCC(i,:) + conDynErrorSum;
-    genDynErrorIntervalSum = generalSoln.info.dynError(i,:) + genDynErrorIntervalSum;
+    genDynErrorIntervalSum = generalSoln.info.collCst(2+i,:) + genDynErrorIntervalSum;
     conDynErrorIntervalSum = consistentSoln.info.dynError(i,:) + conDynErrorIntervalSum;
 end
-idx = 1:length(generalSoln.info.objError);
+idx = 1:length(generalSoln.info.collCst);
 
 % plot system dynamic error process
 figure(105); clf;
@@ -80,16 +80,16 @@ hold off
 ylabel('$\eta_{sd}(t)$','Interpreter','latex','FontSize',16)
 xlabel('$k$','Interpreter','latex','FontSize',16)
 
-% plot system dynamic error of each time interval
-figure (107);clf;
-genObjCst = generalSoln.interp.objCst(t);
-conObjCst = consistentSoln.interp.objCst(t);
-plot(t, genObjCst(1,:));
-hold on
-plot(t, conObjCst(1,:));
-legend("Kelly's", 'Ours','Interpreter','latex')
-% title('Objective approximation error','Interpreter','latex')
-ylabel('$\varepsilon_{obj}(t)$','Interpreter','latex','FontSize',16)
+% % plot system dynamic error of each time interval
+% figure (107);clf;
+% genObjCst = generalSoln.interp.objCst(t);
+% conObjCst = consistentSoln.interp.objCst(t);
+% plot(t, genObjCst(1,:));
+% hold on
+% plot(t, conObjCst(1,:));
+% legend("Kelly's", 'Ours','Interpreter','latex')
+% % title('Objective approximation error','Interpreter','latex')
+% ylabel('$\varepsilon_{obj}(t)$','Interpreter','latex','FontSize',16)
 xlabel('$t$','Interpreter','latex','FontSize',16)
 
 

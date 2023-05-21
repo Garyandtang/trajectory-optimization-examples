@@ -50,6 +50,9 @@ bounds.finalTime.upper = 4;
 % Bounds on state:
 bounds.state.lower = [-1.0*l; -2*pi; -10*l/wn; -10*pi/wn];
 bounds.state.upper = [1.0*l; 2*pi; 10*l/wn; 10*pi/wn];
+% bounds.state.lower = -inf*ones(4,1);
+% bounds.state.upper = inf*ones(4,1);
+
 
 % Bounds on control:
 bounds.control.lower = -5*m1*g;

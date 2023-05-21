@@ -1,28 +1,27 @@
-function soln = consistentTrapzoidMethod(problem, objApproximation)
+function soln = firstOrderTrapzoidMethod(problem, objAppro)
 import casadi.*
-addpath("..")
+addpath("../");
 %%% first-order method
 % get block move model
 model = problem.model;
 nState = model.dim.nState;
 nControl = model.dim.nControl;
 nConfig = model.dim.nConfig;
-nTrajPts = problem.grid.nTrajPts;
 
 % get problem constraints
 initState = problem.constraints.boundarys.initState;
 finalState = problem.constraints.boundarys.finalState;
 finalTime = problem.constraints.boundarys.finalTime;
-
-f = model.CTDynamic.evaluation.secondOrder; % this is 2nd-order dynamics
+nTrajPts = problem.grid.nTrajPts;
+f = model.CTDynamic.evaluation.firstOrder; % this is 1st-order dynamics
 dt = finalTime / (nTrajPts - 1);
 control.lower = problem.constraints.bounds.control.lower;
 control.upper = problem.constraints.bounds.control.upper;
 state.lower = problem.constraints.bounds.state.lower;
 state.upper = problem.constraints.bounds.state.upper;
 
-w0 = ones((nTrajPts)*(nControl+nState),1);
-
+w0 = zeros((nTrajPts)*(nControl+nState),1);
+tic
 %%% Formulate the NLP
 % define nlp container
 nlpConstainer.obj = 0;
@@ -37,12 +36,10 @@ nlpConstainer.constraints.lbg = [];
 nlpConstainer.constraints.ubg = [];
 
 
-% decision variable on Q V and U and var bound constraints
+% decision variable on Z and U and var bound constraints
 for i = 1 : nTrajPts
-    qk = MX.sym(['Q_' num2str(i)], nConfig);
-    vk = MX.sym(['V_' num2str(i)], nConfig);
-    zk = [qk; vk];
-    uk = MX.sym(['U_' num2str(i)], nControl);
+    zk = MX.sym(['X_' num2str(1)], nState);
+    uk = MX.sym(['U_' num2str(1)], nControl);
     nlpConstainer.decVar.Z = [nlpConstainer.decVar.Z, zk];     
     nlpConstainer.decVar.U = [nlpConstainer.decVar.U, uk];    
     nlpConstainer.bounds.lbu = [nlpConstainer.bounds.lbu; control.lower];   % concatenated control lower bound
@@ -56,25 +53,21 @@ for i = 2 : nTrajPts
     ukPrev = nlpConstainer.decVar.U(:, i-1);
     uk = nlpConstainer.decVar.U(:, i);
     zkPrev = nlpConstainer.decVar.Z(:, i-1);
-    qkPrev = zkPrev(1:nConfig, :);
-    vkPrev = zkPrev(nConfig+1:end, :);
     zk = nlpConstainer.decVar.Z(:, i);
-    qk = zk(1:nConfig, :);
-    vk = zk(nConfig+1:end, :);
-    ddqkPrev = f(qkPrev,vkPrev, ukPrev);
-    ddqk = f(qk, vk, uk);
+    dzkPrev = f(zkPrev, ukPrev);
+    dzk = f(zk, uk);
     % calcuate defect constraints besed on trapezoidal rule
-    g1 = vk - vkPrev -dt/2*(ddqk + ddqkPrev);
-    g2 = qk - qkPrev -vkPrev*dt - dt^2*(2*ddqkPrev + ddqk)/6;
-    nlpConstainer.constraints.g = [nlpConstainer.constraints.g; g1;g2];
+    g1 = zk - zkPrev - dt/2*(dzk + dzkPrev);
+    nlpConstainer.constraints.g = [nlpConstainer.constraints.g; g1];
     nlpConstainer.constraints.lbg = [nlpConstainer.constraints.lbg; zeros(nState, 1)];
     nlpConstainer.constraints.ubg = [nlpConstainer.constraints.ubg; zeros(nState,1)];
     % calculate cost function by tapezoidal rule
-    if (objApproximation == 1)
-        nlpConstainer.obj = nlpConstainer.obj + dt*(ukPrev^2 + ukPrev*uk + uk^2)/3;
-    else
+    if (objAppro == 1)
         nlpConstainer.obj = nlpConstainer.obj + dt*(ukPrev^2 + uk^2)/2;
+    else
+        nlpConstainer.obj = nlpConstainer.obj + dt*(ukPrev^2 + ukPrev*uk + uk^2)/3;
     end
+    
 end
 
 % other constraints
@@ -105,33 +98,35 @@ solver = nlpsol('solver', 'ipopt', prob);
 % Solve the NLP
 sol = solver('x0', w0, 'lbx', lbw, 'ubx', ubw, 'lbg', lbg, 'ubg', ubg);
 w_opt = full(sol.x);
-
+toc
 % pack the result
 dim.nState = [nState, nTrajPts];
 dim.nControl = [nControl, nTrajPts];
-[~, xSoln, uSoln] = unpackDecVarBM(w_opt,dim);
+[~, xSoln, uSoln] = unpackDecVar(w_opt,dim);
 tSoln = linspace(0, finalTime, nTrajPts);
 soln.tSoln = tSoln;
 soln.qSoln = xSoln(1:nConfig,:);
 soln.dqSoln = xSoln(nConfig+1:end,:);
 soln.uSoln = uSoln;
 
-ddqSoln = full(f(soln.qSoln, soln.dqSoln, uSoln));
-soln.interp.u = @(tt)( interp1(tSoln',uSoln',tt')' );
+dxSoln = full(f(xSoln, uSoln));
+
+ddqSoln = dxSoln(nConfig+1:end, :);
+
 soln.interp.dq = @(tt)(bSpline2(tSoln, soln.dqSoln, ddqSoln,tt));
-soln.interp.q = @(tt)(bSpline3(tSoln, soln.qSoln, soln.dqSoln, ddqSoln,tt));
+soln.interp.q = @(tt)(bSpline2(tSoln, soln.qSoln, soln.dqSoln,tt));
+soln.interp.x = @(t)([soln.interp.q(t);soln.interp.dq(t)]);
+soln.interp.u = @(tt)( interp1(tSoln',uSoln',tt')' );
 
-soln.optimalSoln.q = @(tt)(3.*tt.^2-2.*tt.^3);
+soln.interp.sysDymError = @(t)(full(f(soln.interp.x(t),soln.interp.u(t)))- ...
+                               interp1(tSoln', [soln.dqSoln;ddqSoln]',t')');
 
-soln.interp.configError = @(t)(soln.interp.q(t) - soln.optimalSoln.q(t));
-soln.interp.sysDymError = @(t)(full(f(soln.interp.q(t),soln.interp.dq(t),soln.interp.u(t)))- ...
-                               interp1(tSoln', ddqSoln',t')');
 % use romberg quadrature to estimate the absolute dynamic error
-absConfigError = @(t)(abs(soln.interp.configError(t)));
+absSysDymError = @(t)(abs(soln.interp.sysDymError(t)));
 nSegment = nTrajPts-1;
-quadTol = 1e-15;   %Compute quadrature to this tolerance  
-soln.info.dynError = zeros(nConfig,nSegment);
+quadTol = 1e-12;   %Compute quadrature to this tolerance  
 for i=1:nSegment
-    soln.info.configError(:,i) = rombergQuadrature(absConfigError,tSoln([i,i+1]),quadTol);
+    soln.info.sysDymError(:,i) = rombergQuadrature(absSysDymError,tSoln([i,i+1]),quadTol);
 end
+
 end

@@ -34,7 +34,63 @@ problem.constraints.bounds.control.lower = -inf*ones(1,1);
 problem.constraints.bounds.control.upper = inf*ones(1,1);
 problem.constraints.bounds.state.lower = -inf*ones(2,1);
 problem.constraints.bounds.state.upper = inf*ones(2,1);
-problem.grid.nTrajPts = 30;
+problem.grid.nTrajPts = 20;
 
-firstOrderSoln = firstOrderTrapzoidMethod(problem)
-second = consistentTrapzoidMethod(problem)
+
+%%% solve the problem and get solution
+% case 1 with obj appro
+objApproximation = 1; % use F(t+1) - F(t) for approximation 
+cp1Soln = firstOrderTrapzoidMethod(problem,objApproximation);
+consistentSoln = consistentTrapzoidMethod(problem, objApproximation);
+
+% case 2 without obj appro
+objApproximation = 0; % use trapzoid method for obj approximation
+cp2Soln = firstOrderTrapzoidMethod(problem, objApproximation);
+cp3Soln = consistentTrapzoidMethod(problem, objApproximation);
+
+%%% Plot the results:
+t = linspace(consistentSoln.tSoln(1),consistentSoln.tSoln(end),1000);
+idx = 1:length(consistentSoln.info.configError);
+consistentQTraj = consistentSoln.interp.q(t);
+optimalQTraj = consistentSoln.optimalSoln.q(t);
+
+% plot result q trajectory and optimal q trajectory
+figure(101); clf; plot(t,consistentQTraj);
+hold on
+plot(t, optimalQTraj);
+
+% plot configuration error evolution
+figure(65); clf;
+plot(t,cp1Soln.interp.configError(t));
+box on;
+hold on
+plot(t,cp2Soln.interp.configError(t));
+plot(t,cp3Soln.interp.configError(t));
+plot(t,consistentSoln.interp.configError(t));
+legend("CG1", 'CG2', "CG3","Ours",'Interpreter','latex','FontSize',10)
+ylabel('$\varepsilon_{config}(t)$','Interpreter','latex','FontSize',16)
+xlabel('$t$','Interpreter','latex','FontSize',16)
+% plot configuration error in each time interval
+figure(66); clf; 
+scatter(idx,cp1Soln.info.configError(1,:), 'o','filled');
+box on;
+hold on
+scatter(idx,cp2Soln.info.configError(1,:), 'o','filled');
+scatter(idx,cp3Soln.info.configError(1,:), 'o','filled');
+scatter(idx,consistentSoln.info.configError(1,:), 'o','filled');
+legend("CG1", 'CP2', "CG3","Ours",'Interpreter','latex')
+ylabel('$\eta_{config,k}$','Interpreter','latex','FontSize',16)
+xlabel('$k$','Interpreter','latex','FontSize',16)
+hold off
+% plot system dynamic error evolution
+figure(67); clf;
+cp1SysDymError = cp1Soln.interp.sysDymError(t);
+plot(t,cp1SysDymError(end,:));
+hold on
+cp2SysDymError = cp2Soln.interp.sysDymError(t);
+plot(t,cp2SysDymError(end,:));
+% hold on
+cp3SysDymError = cp3Soln.interp.sysDymError(t);
+plot(t,cp3SysDymError(end,:));
+plot(t,consistentSoln.interp.sysDymError(t));
+legend("CG1", 'CG2', "CG3","Ours",'Interpreter','latex')
