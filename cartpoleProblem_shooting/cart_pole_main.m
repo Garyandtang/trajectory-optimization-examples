@@ -24,20 +24,26 @@ problem.constraints.bounds.control.lower = -inf*ones(1,1);
 problem.constraints.bounds.control.upper = inf*ones(1,1);
 problem.constraints.bounds.state.lower = -inf*ones(4,1);
 problem.constraints.bounds.state.upper = inf*ones(4,1);
-problem.grid.nTrajPts = 50;
+problem.grid.nTrajPts = 40;
+
+% method configuration
+config.method.objAppro = "explict_trapzoid";
+config.method.dynamics = "first_order_euler";
 
 % flag
-config.flag.animationOn = true;
+config.flag.animationOn = false;
 
 
 
 %%% solve the problem and get solution
-% case 1 with obj appro
+config.method.objAppro = "explict_trapzoid";
+config.method.dynamics = "first_order_euler";
 objApproximation = 1; % use F(t+1) - F(t) for approximation 
-
 cp1Soln = firstOrderShooting(problem,objApproximation, config);
 
-ourSoln = consistentTrapzoidMethod(problem, objApproximation);
+config.method.objAppro = "explict_trapzoid";
+config.method.dynamics = "second_order_euler";
+ourSoln = firstOrderShooting(problem,objApproximation, config);
 
 
 
@@ -79,5 +85,6 @@ legend("CG1","Ours",'Interpreter','latex')
 ylabel('$\eta_{dyn,k}$','Interpreter','latex','FontSize',16)
 xlabel('$k$','Interpreter','latex','FontSize',16)
 hold off
- sum(cp1SolnSysDymErrorIntervalSum)
- sum(ourSolnSysDymErrorIntervalSum)
+
+sum(cp1SolnSysDymErrorIntervalSum)
+sum(ourSolnSysDymErrorIntervalSum)
