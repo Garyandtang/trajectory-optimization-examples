@@ -14,6 +14,7 @@ finalState = problem.constraints.boundarys.finalState;
 finalTime = problem.constraints.boundarys.finalTime;
 nTrajPts = problem.grid.nTrajPts;
 f = model.CTDynamic.evaluation.firstOrder; % this is 1st-order dynamics
+f2 = model.CTDynamic.evaluation.secondOrder;
 dt = finalTime / (nTrajPts - 1);
 control.lower = problem.constraints.bounds.control.lower;
 control.upper = problem.constraints.bounds.control.upper;
@@ -92,18 +93,18 @@ soln.tSoln = tSoln;
 soln.qSoln = xSoln(1:nConfig,:);
 soln.dqSoln = xSoln(nConfig+1:end,:);
 soln.uSoln = uSoln;
+% recover ddq result based on second-order system dyns
+soln.ddqSoln = full(f2(soln.qSoln, soln.dqSoln, uSoln));
 
-dxSoln = full(f(xSoln, uSoln));
-
-ddqSoln = dxSoln(nConfig+1:end, :);
-
-soln.interp.dq = @(tt)(bSpline2(tSoln, soln.dqSoln, ddqSoln,tt));
-soln.interp.q = @(tt)(bSpline2(tSoln, soln.qSoln, soln.dqSoln,tt));
-soln.interp.x = @(t)([soln.interp.q(t);soln.interp.dq(t)]);
 soln.interp.u = @(tt)( interp1(tSoln',uSoln',tt')' );
+soln.interp.ddq = @(tt)( interp1(tSoln', soln.ddqSoln', tt')');
+soln.interp.dq = @(tt)(bSpline2(tSoln, soln.dqSoln, soln.ddqSoln,tt));
+soln.interp.q = @(tt)(bSpline3(tSoln, soln.qSoln, soln.dqSoln, soln.ddqSoln, tt));
+soln.interp.x = @(t)([soln.interp.q(t);soln.interp.dq(t)]);
 
-soln.interp.sysDymError = @(t)(full(f(soln.interp.x(t),soln.interp.u(t)))- ...
-                               interp1(tSoln', [soln.dqSoln;ddqSoln]',t')');
+
+soln.interp.sysDymError = @(t)(full(f2(soln.interp.q(t),soln.interp.dq(t),soln.interp.u(t)))- ...
+                               soln.interp.ddq(t));
 
 % use romberg quadrature to estimate the absolute dynamic error
 absSysDymError = @(t)(abs(soln.interp.sysDymError(t)));

@@ -19,16 +19,27 @@ problem.cost.type = "LQR";
 % wn = sqrt(l/g);
 problem.constraints.boundarys.initState = zeros(nState,1);
 problem.constraints.boundarys.finalState = [0;pi;0;0];
-problem.constraints.boundarys.finalTime = 4;
+problem.constraints.boundarys.finalTime = 3;
 problem.constraints.bounds.control.lower = -inf*ones(1,1);
 problem.constraints.bounds.control.upper = inf*ones(1,1);
 problem.constraints.bounds.state.lower = -inf*ones(4,1);
 problem.constraints.bounds.state.upper = inf*ones(4,1);
-problem.grid.nTrajPts = 40;
+problem.grid.nTrajPts = 10;
 
-% method configuration
-config.method.objAppro = "explict_trapzoid";
-config.method.dynamics = "first_order_euler";
+% setup result 
+timeResult.firstEuler = [];
+timeResult.firstRk4 = [];
+timeResult.secondEuler = [];
+timeResult.secondRk4 = [];
+
+errorResult.firstEuler = [];
+errorResult.firstRk4 = [];
+errorResult.secondEuler = [];
+errorResult.secondRk4 = [];
+
+
+for i = 1 : 10
+end
 
 % flag
 config.flag.animationOn = false;
@@ -37,12 +48,12 @@ config.flag.animationOn = false;
 
 %%% solve the problem and get solution
 config.method.objAppro = "explict_trapzoid";
-config.method.dynamics = "first_order_euler";
+config.method.dynamics = "first_order_rk4";
 objApproximation = 1; % use F(t+1) - F(t) for approximation 
 cp1Soln = firstOrderShooting(problem,objApproximation, config);
 
 config.method.objAppro = "explict_trapzoid";
-config.method.dynamics = "second_order_euler";
+config.method.dynamics = "second_order_rk4";
 ourSoln = firstOrderShooting(problem,objApproximation, config);
 
 
@@ -55,7 +66,7 @@ cp1SolnSysDymErrorTraj = cp1Soln.interp.sysDymError(t);
 ourDymErrorTraj = ourSoln.interp.sysDymError(t);
 cp1SolnSysDymErrorTrajSum = zeros(1, size(cp1SolnSysDymErrorTraj,2));
 oursDymErrorTrajSum = zeros(1, size(ourDymErrorTraj, 2));
-for i = 1 : nState
+for i = 1 : nConfig
     cp1SolnSysDymErrorTrajSum = cp1SolnSysDymErrorTrajSum + cp1SolnSysDymErrorTraj(i,:);
     oursDymErrorTrajSum = oursDymErrorTrajSum + ourDymErrorTraj(i,:);
 end
@@ -71,7 +82,7 @@ hold off
 % plot system dynamic error of each time interval
 cp1SolnSysDymErrorIntervalSum = zeros(1, size(cp1Soln.info.sysDymError,2));
 ourSolnSysDymErrorIntervalSum = zeros(1, size(ourSoln.info.sysDymError,2));
-for i = 1 : nState
+for i = 1 : nConfig
     cp1SolnSysDymErrorIntervalSum = cp1SolnSysDymErrorIntervalSum + cp1Soln.info.sysDymError(i,:);
     ourSolnSysDymErrorIntervalSum = ourSolnSysDymErrorIntervalSum + ourSoln.info.sysDymError(i,:);
 end
