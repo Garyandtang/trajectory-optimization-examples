@@ -24,7 +24,12 @@ problem.constraints.bounds.control.lower = -inf*ones(1,1);
 problem.constraints.bounds.control.upper = inf*ones(1,1);
 problem.constraints.bounds.state.lower = -inf*ones(4,1);
 problem.constraints.bounds.state.upper = inf*ones(4,1);
-problem.grid.nTrajPts = 10;
+problem.grid.nTrajPts = 100;
+baseNTrajPts = 10;
+% flag
+config.flag.animationOn = false;
+objApproximation = 1; % use F(t+1) - F(t) for approximation 
+
 
 % setup result 
 timeResult.firstEuler = [];
@@ -38,13 +43,46 @@ errorResult.secondEuler = [];
 errorResult.secondRk4 = [];
 
 
-for i = 1 : 10
+for i = 1 : 15
+    %%% solve the problem
+    config.method.objAppro = "explict_trapzoid";
+    problem.grid.nTrajPts = baseNTrajPts * i;
+
+    % first euler
+    config.method.dynamics = "first_order_euler";
+    euler1Soln = firstOrderShooting(problem, objApproximation, config);
+
+    % second euler
+    config.method.dynamics = "second_order_euler";
+    euler2Soln = firstOrderShooting(problem, objApproximation, config);
+    
+    % first rk4
+    config.method.dynamics = "first_order_rk4";
+    rk1Soln = firstOrderShooting(problem, objApproximation, config);
+    
+    % second rk4
+    config.method.dynamics = "second_order_rk4";
+    rk2Soln = firstOrderShooting(problem, objApproximation, config);
+
+    %%% record the data
+    % record solver time used
+    timeResult.firstEuler = [timeResult.firstEuler, euler1Soln.solverTime];
+    timeResult.secondEuler = [timeResult.secondEuler, euler2Soln.solverTime];
+    timeResult.firstRk4 = [timeResult.firstRk4, rk1Soln.solverTime];
+    timeResult.secondRk4 = [timeResult.secondRk4, rk2Soln.solverTime];
+
+    % record error 
+    errorResult.firstEuler = [errorResult.firstEuler, sum(sum(euler1Soln.info.sysDymError))];
+    errorResult.secondEuler = [errorResult.secondEuler, sum(sum(euler2Soln.info.sysDymError))];
+    errorResult.firstRk4 = [errorResult.firstRk4, sum(sum(rk1Soln.info.sysDymError))];
+    errorResult.secondRk4 = [errorResult.secondRk4, sum(sum(rk2Soln.info.sysDymError))]
+    
 end
 
-% flag
-config.flag.animationOn = false;
+save("cart_pole_main.mat")
 
 
+return
 
 %%% solve the problem and get solution
 config.method.objAppro = "explict_trapzoid";
@@ -52,6 +90,7 @@ config.method.dynamics = "first_order_rk4";
 objApproximation = 1; % use F(t+1) - F(t) for approximation 
 cp1Soln = firstOrderShooting(problem,objApproximation, config);
 
+return
 config.method.objAppro = "explict_trapzoid";
 config.method.dynamics = "second_order_rk4";
 ourSoln = firstOrderShooting(problem,objApproximation, config);
@@ -99,3 +138,18 @@ hold off
 
 sum(cp1SolnSysDymErrorIntervalSum)
 sum(ourSolnSysDymErrorIntervalSum)
+
+% t = linspace(euler1Soln.tSoln(1),cp1Soln.tSoln(end),1000);
+% idx = 1:length(euler1Soln.info.sysDymError);
+% 
+% euler1Error = zeros(1,size(euler1Soln.info.sysDymError,2));
+% euler2Error = zeros(1,size(euler1Soln.info.sysDymError,2));
+% rk1Error = zeros(1,size(euler1Soln.info.sysDymError,2));
+% rk2Error = zeros(1,size(euler1Soln.info.sysDymError,2));
+% 
+% for j = 1 : nControl
+%     euler1Error = euler1Error + euler1Soln.info.sysDymError(j, :);
+%     euler2Error = euler2Error + euler2Soln.info.sysDymError(j, :);
+%     rk1Error = rk1Error + rk1Soln.info.sysDymError(j, :);
+%     rk2Error = rk2Error + rk2Soln.info.sysDymError(j, :);
+% end

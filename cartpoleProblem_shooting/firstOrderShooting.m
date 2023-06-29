@@ -22,7 +22,6 @@ state.lower = problem.constraints.bounds.state.lower;
 state.upper = problem.constraints.bounds.state.upper;
 
 w0 = zeros((nTrajPts)*(nControl+nState),1);
-tic
 %%% Formulate the NLP
 % define nlp container
 nlpContainer.obj = 0;
@@ -76,6 +75,7 @@ ubw = [nlpContainer.bounds.ubz; nlpContainer.bounds.ubu];
 g = nlpContainer.constraints.g;
 lbg = nlpContainer.constraints.lbg;
 ubg = nlpContainer.constraints.ubg;
+tic 
 % Create an NLP solver
 prob = struct('f', J, 'x', w, 'g', g);
 solver = nlpsol('solver', 'ipopt', prob);
@@ -83,7 +83,8 @@ solver = nlpsol('solver', 'ipopt', prob);
 % Solve the NLP
 sol = solver('x0', w0, 'lbx', lbw, 'ubx', ubw, 'lbg', lbg, 'ubg', ubg);
 w_opt = full(sol.x);
-toc
+soln.solverTime = toc;
+
 % pack the result
 dim.nState = [nState, nTrajPts];
 dim.nControl = [nControl, nTrajPts];
