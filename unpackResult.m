@@ -1,4 +1,4 @@
-function [tSpan, x, u] = unpackDecVar(z, dim)
+function [tSpan, x, u] = unpackResult(z, dim)
 ns = dim.nState;  % ns = size(x)
 nc = dim.nControl; % nc = size(u)
 

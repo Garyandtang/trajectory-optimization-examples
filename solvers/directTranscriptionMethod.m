@@ -1,4 +1,4 @@
-function soln = firstOrderShooting(problem, objAppro, config)
+function soln = directTranscriptionMethod(problem, objAppro, config)
 import casadi.*
 addpath("../");
 %%% first-order method
@@ -88,7 +88,7 @@ soln.solverTime = toc;
 % pack the result
 dim.nState = [nState, nTrajPts];
 dim.nControl = [nControl, nTrajPts];
-[~, xSoln, uSoln] = unpackDecVar(w_opt,dim);
+[~, xSoln, uSoln] = unpackResult(w_opt,dim);
 tSoln = linspace(0, finalTime, nTrajPts);
 soln.tSoln = tSoln;
 soln.qSoln = xSoln(1:nConfig,:);

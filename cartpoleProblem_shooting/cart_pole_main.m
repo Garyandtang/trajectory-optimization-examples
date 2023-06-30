@@ -4,7 +4,9 @@ clc;clear;
 addpath(genpath("D:\software\casadi-windows-matlabR2016a-v3.5.5"))
 import casadi.*
 addpath("..\models\")
-addpath("../");
+addpath("..\");
+addpath("..\solvers\")
+
 %%% setup problem
 config.dyn.g = 9.81;
 config.dyn.l = 1;
@@ -43,26 +45,26 @@ errorResult.secondEuler = [];
 errorResult.secondRk4 = [];
 
 
-for i = 1 : 15
+for i = 1 : 1
     %%% solve the problem
     config.method.objAppro = "explict_trapzoid";
     problem.grid.nTrajPts = baseNTrajPts * i;
 
     % first euler
     config.method.dynamics = "first_order_euler";
-    euler1Soln = firstOrderShooting(problem, objApproximation, config);
+    euler1Soln = directTranscriptionMethod(problem, objApproximation, config);
 
     % second euler
     config.method.dynamics = "second_order_euler";
-    euler2Soln = firstOrderShooting(problem, objApproximation, config);
+    euler2Soln = directTranscriptionMethod(problem, objApproximation, config);
     
     % first rk4
     config.method.dynamics = "first_order_rk4";
-    rk1Soln = firstOrderShooting(problem, objApproximation, config);
+    rk1Soln = directTranscriptionMethod(problem, objApproximation, config);
     
     % second rk4
     config.method.dynamics = "second_order_rk4";
-    rk2Soln = firstOrderShooting(problem, objApproximation, config);
+    rk2Soln = directTranscriptionMethod(problem, objApproximation, config);
 
     %%% record the data
     % record solver time used
@@ -79,7 +81,7 @@ for i = 1 : 15
     
 end
 
-save("cart_pole_main.mat")
+% save("cart_pole_main.mat")
 
 
 return

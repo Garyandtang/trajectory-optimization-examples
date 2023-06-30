@@ -35,7 +35,7 @@ config.flag.animationOn = true;
 % case 1 with obj appro
 objApproximation = 1; % use F(t+1) - F(t) for approximation 
 
-cp1Soln = firstOrderShooting(problem,objApproximation, config);
+cp1Soln = firstOrderTrapzoidMethod(problem,objApproximation);
 
 ourSoln = consistentTrapzoidMethod(problem, objApproximation);
 
