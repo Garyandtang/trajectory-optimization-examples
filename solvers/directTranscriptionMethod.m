@@ -106,6 +106,8 @@ soln.interp.x = @(t)([soln.interp.q(t);soln.interp.dq(t)]);
 
 if (isfield(problem, "trueSoln"))
     trueSoln.interp.q = @(t)(bSpline3(problem.trueSoln.tSoln, problem.trueSoln.qSoln, problem.trueSoln.dqSoln, problem.trueSoln.ddqSoln,t));
+%     trueSoln.interp.q = @(t)(bSpline2(problem.trueSoln.tSoln, problem.trueSoln.qSoln, problem.trueSoln.dqSoln, t));
+%     trueSoln.interp.q = @(t)(interp1(problem.trueSoln.tSoln',problem.trueSoln.qSoln',t')');
     soln.interp.sysDymError = @(t)(soln.interp.q(t) - trueSoln.interp.q(t));
 else 
     warning("trueSoln is not provided, use estimated system dynamics error")
@@ -164,11 +166,11 @@ function nlpContainer = setDefectConstraints(nlpContainer, model, dt, config)
                 g2 = qk - qkPrev - dt*vkPrev - 0.5*dt*dt*ddqkPrev;
                 g = [g1; g2];
             case "first_order_rk4"
-                k1 = f(zkPrev, ukPrev);
-                k2 = f(zkPrev + 0.5*dt*k1, ukPrev);
-                k3 = f(zkPrev + 0.5*dt*k2, ukPrev);
-                k4 = f(zkPrev + dt*k3, ukPrev);
-                g = zk - zkPrev - (dt/6)*(k1 + 2*k2 + 2*k3 + k4);
+                k1 = dt*f(zkPrev, ukPrev);
+                k2 = dt*f(zkPrev + 0.5*k1, ukPrev);
+                k3 = dt*f(zkPrev + 0.5*k2, ukPrev);
+                k4 = dt*f(zkPrev + k3, ukPrev);
+                g = zk - zkPrev - (1/6)*(k1 + 2*k2 + 2*k3 + k4);
             case "second_order_rk4"
                 % decode q and q_dot from state z
                 qkPrev = zkPrev(1:nConfig, :);
@@ -177,9 +179,9 @@ function nlpContainer = setDefectConstraints(nlpContainer, model, dt, config)
                 vk = zk(nConfig+1:end, :);
                 % set defect constraints
                 k1 = dt*f2(qkPrev, vkPrev, ukPrev);
-                k2 = dt*f2(qkPrev, vkPrev + 0.5*k1, ukPrev);
-                k3 = dt*f2(qkPrev, vkPrev + 0.5*k2, ukPrev);
-                k4 = dt*f2(qkPrev, vkPrev + k3, ukPrev);
+                k2 = dt*f2(qkPrev+0.5*dt*vkPrev, vkPrev + 0.5*k1, ukPrev);
+                k3 = dt*f2(qkPrev+0.5*dt*vkPrev, vkPrev + 0.5*k2, ukPrev);
+                k4 = dt*f2(qkPrev+dt*vkPrev, vkPrev + k3, ukPrev);
                 g1 = vk - vkPrev - (1/6)*(k1 + 2*k2 + 2*k3 + k4);
                 g2 = qk - qkPrev - dt*vkPrev - (dt/30)*(6*k1+5*k2+3*k3+k4);
                 g = [g1;g2];

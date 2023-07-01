@@ -46,7 +46,7 @@ errorResult.secondRk4 = [];
 
 % % get true solution with large nTrajPts
 % problem.grid.nTrajPts = 500;
-% config.method.dynamics = "second_order_rk4";
+% config.method.dynamics = "second_order_euler";
 % trueSoln = directTranscriptionMethod(problem, objApproximation, config);
 % 
 % problem.trueSoln.qSoln = trueSoln.qSoln;
