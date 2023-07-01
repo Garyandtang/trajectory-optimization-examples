@@ -104,8 +104,16 @@ soln.interp.q = @(tt)(bSpline3(tSoln, soln.qSoln, soln.dqSoln, soln.ddqSoln, tt)
 soln.interp.x = @(t)([soln.interp.q(t);soln.interp.dq(t)]);
 
 
-soln.interp.sysDymError = @(t)(full(f2(soln.interp.q(t),soln.interp.dq(t),soln.interp.u(t)))- ...
+if (isfield(problem, "trueSoln"))
+    trueSoln.interp.q = @(t)(bSpline3(problem.trueSoln.tSoln, problem.trueSoln.qSoln, problem.trueSoln.dqSoln, problem.trueSoln.ddqSoln,t));
+    soln.interp.sysDymError = @(t)(soln.interp.q(t) - trueSoln.interp.q(t));
+else 
+    warning("trueSoln is not provided, use estimated system dynamics error")
+    soln.interp.sysDymError = @(t)(full(f2(soln.interp.q(t),soln.interp.dq(t),soln.interp.u(t)))- ...
                                soln.interp.ddq(t));
+end
+
+
 
 % use romberg quadrature to estimate the absolute dynamic error
 absSysDymError = @(t)(abs(soln.interp.sysDymError(t)));

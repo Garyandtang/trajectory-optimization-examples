@@ -1,4 +1,4 @@
-clc;clear;
+% clc;clear;
 
 %%% Setup casadi solver 
 addpath(genpath("D:\software\casadi-windows-matlabR2016a-v3.5.5"))
@@ -30,8 +30,8 @@ problem.grid.nTrajPts = 100;
 baseNTrajPts = 10;
 % flag
 config.flag.animationOn = false;
+config.method.objAppro = "explict_trapzoid";
 objApproximation = 1; % use F(t+1) - F(t) for approximation 
-
 
 % setup result 
 timeResult.firstEuler = [];
@@ -44,10 +44,19 @@ errorResult.firstRk4 = [];
 errorResult.secondEuler = [];
 errorResult.secondRk4 = [];
 
+% % get true solution with large nTrajPts
+% problem.grid.nTrajPts = 500;
+% config.method.dynamics = "second_order_rk4";
+% trueSoln = directTranscriptionMethod(problem, objApproximation, config);
+% 
+% problem.trueSoln.qSoln = trueSoln.qSoln;
+% problem.trueSoln.dqSoln = trueSoln.dqSoln;
+% problem.trueSoln.ddqSoln = trueSoln.ddqSoln;
+% problem.trueSoln.uSoln = trueSoln.uSoln;
+% problem.trueSoln.tSoln = trueSoln.tSoln;
 
-for i = 1 : 1
+for i = 1 : 15
     %%% solve the problem
-    config.method.objAppro = "explict_trapzoid";
     problem.grid.nTrajPts = baseNTrajPts * i;
 
     % first euler
@@ -81,7 +90,7 @@ for i = 1 : 1
     
 end
 
-% save("cart_pole_main.mat")
+save("cart_pole_result_7_1.mat")
 
 
 return
