@@ -1,7 +1,7 @@
-function soln = directTranscriptionMethod(problem, objAppro, config)
+function soln = directTranscriptionMethod(problem, config)
 import casadi.*
 addpath("../");
-%%% first-order method
+
 % get block move model
 model = problem.model;
 nState = model.dim.nState;
@@ -13,7 +13,7 @@ initState = problem.constraints.boundarys.initState;
 finalState = problem.constraints.boundarys.finalState;
 finalTime = problem.constraints.boundarys.finalTime;
 nTrajPts = problem.grid.nTrajPts;
-f = model.CTDynamic.evaluation.firstOrder; % this is 1st-order dynamics
+f1 = model.CTDynamic.evaluation.firstOrder; % this is 1st-order dynamics
 f2 = model.CTDynamic.evaluation.secondOrder;
 dt = finalTime / (nTrajPts - 1);
 control.lower = problem.constraints.bounds.control.lower;
@@ -21,7 +21,17 @@ control.upper = problem.constraints.bounds.control.upper;
 state.lower = problem.constraints.bounds.state.lower;
 state.upper = problem.constraints.bounds.state.upper;
 
+% object function transcription configuration
+objConfig.dt = dt;
+objConfig.Q = problem.cost.Q;
+objConfig.R = problem.cost.R;
+objConfig.method = config.method.objAppro;
+
+% init solution
+% todo: more reasonable init solution
 w0 = zeros((nTrajPts)*(nControl+nState),1);
+
+
 %%% Formulate the NLP
 % define nlp container
 nlpContainer.obj = 0;
@@ -52,7 +62,7 @@ end
 nlpContainer = setDefectConstraints(nlpContainer, model, dt, config);
 
 % objective value
-nlpContainer = setObjFunction(nlpContainer, model, dt, config);
+nlpContainer = setObjFunction(nlpContainer, model, objConfig);
 
 % other constraints
 % start state constraint
@@ -75,6 +85,8 @@ ubw = [nlpContainer.bounds.ubz; nlpContainer.bounds.ubu];
 g = nlpContainer.constraints.g;
 lbg = nlpContainer.constraints.lbg;
 ubg = nlpContainer.constraints.ubg;
+
+
 tic 
 % Create an NLP solver
 prob = struct('f', J, 'x', w, 'g', g);
@@ -125,15 +137,6 @@ for i=1:nSegment
     soln.info.sysDymError(:,i) = rombergQuadrature(absSysDymError,tSoln([i,i+1]),quadTol);
 end
 
-P.plotFunc = @(t,z)( drawCartPole(t,z,config.dyn) );
-P.speed = 0.7;
-P.figNum = 102;
-t = linspace(soln.tSoln(1),soln.tSoln(end),250);
-z = soln.interp.x(t);
-if config.flag.animationOn
-   animate(t,z,P)
-end
-
 end
 %=============== helper function ======================
 function nlpContainer = setDefectConstraints(nlpContainer, model, dt, config)
@@ -181,7 +184,7 @@ function nlpContainer = setDefectConstraints(nlpContainer, model, dt, config)
                 k1 = dt*f2(qkPrev, vkPrev, ukPrev);
                 k2 = dt*f2(qkPrev+0.5*dt*vkPrev, vkPrev + 0.5*k1, ukPrev);
                 k3 = dt*f2(qkPrev+0.5*dt*vkPrev, vkPrev + 0.5*k2, ukPrev);
-                k4 = dt*f2(qkPrev+dt*vkPrev, vkPrev + k3, ukPrev);
+                k4 = dt*f2(qkPrev+dt*vkPrev , vkPrev + k3, ukPrev);
                 g1 = vk - vkPrev - (1/6)*(k1 + 2*k2 + 2*k3 + k4);
                 g2 = qk - qkPrev - dt*vkPrev - (dt/30)*(6*k1+5*k2+3*k3+k4);
                 g = [g1;g2];
@@ -194,16 +197,27 @@ function nlpContainer = setDefectConstraints(nlpContainer, model, dt, config)
     end
 end
 
-function nlpContainer = setObjFunction(nlpContainer, model, dt, config)
+function nlpContainer = setObjFunction(nlpContainer, model, objConfig)
+    dt = objConfig.dt;
+    R = objConfig.R;
+    Q = objConfig.Q;
     nTrajPts = size(nlpContainer.decVar.Z, 2);
+
     for i = 2 : nTrajPts
         ukPrev = nlpContainer.decVar.U(:, i-1);
         uk = nlpContainer.decVar.U(:, i);
+        xkPrev = nlpContainer.decVar.Z(:, i-1);
+        xk = nlpContainer.decVar.Z(:,i);
         % calculate cost function by tapezoidal rule
-        if (1)
-            nlpContainer.obj = nlpContainer.obj + dt*(ukPrev^2 + uk^2)/2;
-        else
-            nlpContainer.obj = nlpContainer.obj + dt*(ukPrev^2 + ukPrev*uk + uk^2)/3;
+        switch objConfig.method
+            case "trapzoid_explict"
+                nlpContainer.obj = nlpContainer.obj + dt*(ukPrev'*R*ukPrev + uk'*R*uk)/2;
+                nlpContainer.obj = nlpContainer.obj + dt*(xkPrev'*Q*xkPrev + xk'*Q*xk)/2;
+            case "trapzoid_implict"
+                nlpContainer.obj = nlpContainer.obj + dt*(ukPrev'*R*ukPrev + uk'*R*ukPrev + uk'*R*uk)/3;
+%                 nlpContainer.obj = nlpContainer.obj + dt*(xkPrev'*Q*xkPrev + xk'*Q*xkPrev + xk'*Q*xk)/3;
+            otherwise
+                error('Unexpected config.method.dynamics.')
         end
         
     end
