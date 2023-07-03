@@ -15,11 +15,6 @@ else
 end
 
 %%% Declare model variables
-q = MX.sym('q');    % block postion
-dq = MX.sym('dq');  % block velocity
-u = MX.sym('u');    % control input: force on block (unit mass)
-z = [q;dq];         % first-order state vector
-
 q1 = MX.sym('q1');      % x position
 dq1 = MX.sym('dq1');    % x velocity
 q2 = MX.sym('q2');      % z position

@@ -26,11 +26,12 @@ addpath('utils');
 % setup dynamics config 
 config.m1 = 1;
 config.m2 = 1;
+config.g = 9.81;
 config.l1 = 0.5;
 config.l2 = 0.5;
-config.g = 9.81;
+
 %%% setup problem
-problem = quadrotor_2d_move_to(config);
+problem = acrobot_swing_up(config);
 
 % flag
 config.flag.animationOn = true;
@@ -48,15 +49,28 @@ euler1Soln = directTranscriptionMethod(problem, config);
 % % first rk4
 % config.method.dynamics = "first_order_rk4";
 % rk1Soln = directTranscriptionMethod(problem,  config);
-% 
-% % second rk4
-% config.method.dynamics = "second_order_rk4";
-% rk2Soln = directTranscriptionMethod(problem,  config);
+
+% second rk4
+config.method.dynamics = "second_order_rk4";
+rk2Soln = directTranscriptionMethod(problem,  config);
 
 if config.flag.animationOn
-    soln = euler1Soln;
-    trajhandle = @traj_diamond;
-    draw_result(soln, trajhandle);
+    soln = rk2Soln;
+    % Interpolate the solution on a uniform grid for plotting and animation:
+    tGrid = soln.tSoln;
+    t = linspace(tGrid(1),tGrid(end),1000);
+    q = soln.interp.q(t);
+    dq = soln.interp.dq(t);
+    z = [q;dq];
+    u = soln.interp.u(t);
+    % Animate the results:
+    A.plotFunc = @(t,z)( drawAcrobot(t,z,config) );
+    A.speed = 0.25;
+    A.figNum = 101;
+    animate(t,z,A)
+    
+    % Plot the results:
+    figure(1337); clf; plotAcrobot(t,z,u,config);
 end
 
 
