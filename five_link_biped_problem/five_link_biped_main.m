@@ -12,7 +12,7 @@
 %       min_{u(t),q(t),dq(t)}  \int_0^1 u(t)^2 dt
 %           s.t.                ddq(t) = u(t)
 %                               q(0) = 0,   dq(1)=0,\\
-%                               q(1) = 1,   dq(1)= 0.
+%                               q(1) = 1,trajhandle   dq(1)= 0.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % clc;clear;
 
@@ -24,13 +24,32 @@ addpath("..\")
 addpath('utils');
 
 % setup dynamics config 
-config.m1 = 1;
-config.m2 = 1;
-config.l1 = 0.5;
-config.l2 = 0.5;
-config.g = 9.81;
+config.m1 = 3.2;
+config.m2 = 6.8;
+config.m3 = 20;
+config.m4 = 6.8;
+config.m5 = 3.2;
+config.I1 = 0.93;
+config.I2 = 1.0800;
+config.I3 = 2.2200;
+config.I4 = 1.0800;
+config.I5 = 0.9300;
+config.l1 = 0.4000;
+config.l2 = 0.4000;
+config.l3 = 0.6250;
+config.l4 = 0.4000;
+config.l5 = 0.4000;
+config.c1 = 0.1280;
+config.c2 = 0.1630;
+config.c3 = 0.2000;
+config.c4 = 0.1630;
+config.c5 = 0.1280;
+config.g = 9.8100;
+config.stepLength = 0.5000;
+config.stepTime = 0.7000;
+
 %%% setup problem
-problem = quadrotor_2d_move_to(config);
+problem = five_link_biped_walk(config);
 
 % flag
 config.flag.animationOn = true;
@@ -48,15 +67,21 @@ euler1Soln = directTranscriptionMethod(problem, config);
 % % first rk4
 % config.method.dynamics = "first_order_rk4";
 % rk1Soln = directTranscriptionMethod(problem,  config);
-% 
+
 % second rk4
 config.method.dynamics = "second_order_rk4";
 rk2Soln = directTranscriptionMethod(problem,  config);
 
 if config.flag.animationOn
     soln = rk2Soln;
-    trajhandle = @traj_diamond;
-    draw_result(soln, trajhandle);
+    q = soln.qSoln;
+    t = soln.tSoln;
+    % Interpolate the solution on a uniform grid for plotting and animation:
+    Anim.speed = 0.25;
+    Anim.plotFunc = @(t,q)( drawRobot(q,config) );
+    Anim.verbose = true;
+    animate(t,q,Anim);
+
 end
 
 
