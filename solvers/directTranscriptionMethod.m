@@ -115,8 +115,9 @@ soln.interp.dq = @(tt)(bSpline2(tSoln, soln.dqSoln, soln.ddqSoln,tt));
 soln.interp.q = @(tt)(bSpline3(tSoln, soln.qSoln, soln.dqSoln, soln.ddqSoln, tt));
 soln.interp.x = @(t)([soln.interp.q(t);soln.interp.dq(t)]);
 
-
-if (isfield(problem, "trueSoln"))
+if (isfield(problem, "optimalSoln"))
+   soln.interp.sysDymError = @(t)(soln.interp.q(t) - problem.optimalSoln.qSoln(t));
+elseif (isfield(problem, "trueSoln"))
     trueSoln.interp.q = @(t)(bSpline3(problem.trueSoln.tSoln, problem.trueSoln.qSoln, problem.trueSoln.dqSoln, problem.trueSoln.ddqSoln,t));
 %     trueSoln.interp.q = @(t)(bSpline2(problem.trueSoln.tSoln, problem.trueSoln.qSoln, problem.trueSoln.dqSoln, t));
 %     trueSoln.interp.q = @(t)(interp1(problem.trueSoln.tSoln',problem.trueSoln.qSoln',t')');

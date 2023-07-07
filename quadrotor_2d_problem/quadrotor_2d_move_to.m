@@ -22,6 +22,6 @@ problem.constraints.bounds.control.lower = -20*ones(nControl,1);
 problem.constraints.bounds.control.upper = 20*ones(nControl,1);
 problem.constraints.bounds.state.lower = -inf*ones(nState,1);
 problem.constraints.bounds.state.upper = inf*ones(nState,1);
-problem.grid.nTrajPts = 50;
+problem.grid.nTrajPts = 30;
 
 end

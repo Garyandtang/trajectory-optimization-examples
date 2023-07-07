@@ -1,7 +1,7 @@
-function problem = quadrotor_1d_move_to(config)
+function problem = block_move_to(config)
 addpath("..\models\")
 %%% setup dynamics
-model = quadrotor1d(config);
+model = blockMoveModel(config);
 problem.model = model;
 nState = model.dim.nState;
 nControl = model.dim.nControl;
@@ -9,7 +9,7 @@ nControl = model.dim.nControl;
 %%% setup cost
 problem.cost.type = "LQR";
 problem.cost.R = 1 * eye(nControl);
-problem.cost.Q = 10 * eye(nState);
+problem.cost.Q = 0 * eye(nState);
 
 %%% setup constraints
 % boundaries constraints

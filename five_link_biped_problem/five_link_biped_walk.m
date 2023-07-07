@@ -8,7 +8,7 @@ nControl = model.dim.nControl;
 
 %%% setup cost
 problem.cost.type = "LQR";
-problem.cost.R = 1 * eye(nControl);
+problem.cost.R = 10 * eye(nControl);
 problem.cost.Q = 0 * eye(nState);
 
 %%% setup constraints
@@ -42,6 +42,6 @@ problem.constraints.bounds.control.upper = 200*ones(nControl,1);
 problem.constraints.bounds.state.lower = -inf*ones(nState,1);
 problem.constraints.bounds.state.upper = inf*ones(nState,1);
 
-problem.grid.nTrajPts = 25;
+problem.grid.nTrajPts = 100;
 
 end
