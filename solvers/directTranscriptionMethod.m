@@ -148,11 +148,12 @@ function nlpContainer = setDefectConstraints(nlpContainer, model, dt, config)
     f2 = model.CTDynamic.evaluation.secondOrder; % this is 2nd-order dynamics
     for i = 2 : nTrajs
         ukPrev = nlpContainer.decVar.U(:, i-1);
+        uk = nlpContainer.decVar.U(:, i);
         zkPrev = nlpContainer.decVar.Z(:, i-1);
         zk = nlpContainer.decVar.Z(:, i);
      
     
-        % calcuate defect constraints besed on trapezoidal rule
+        % calcuate defect constraints besed on different rule
         switch config.method.dynamics
 
             case "first_order_euler"
@@ -188,6 +189,22 @@ function nlpContainer = setDefectConstraints(nlpContainer, model, dt, config)
                 k4 = dt*f2(qkPrev+dt*vkPrev , vkPrev + k3, ukPrev);
                 g1 = vk - vkPrev - (1/6)*(k1 + 2*k2 + 2*k3 + k4);
                 g2 = qk - qkPrev - dt*vkPrev - (dt/30)*(6*k1+5*k2+3*k3+k4);
+                g = [g1;g2];
+            case "first_order_trapzoidal"
+                dzkPrev = f(zkPrev, ukPrev);
+                dzk = f(zk, uk);
+                g = zk - zkPrev - dt/2*(dzk + dzkPrev);
+            case "second_order_trapzoidal"
+                % decode q and q_dot from state z
+                qkPrev = zkPrev(1:nConfig, :);
+                vkPrev = zkPrev(nConfig+1:end, :);
+                qk = zk(1:nConfig, :);
+                vk = zk(nConfig+1:end, :);
+                ddqkPrev = f2(qkPrev,vkPrev, ukPrev);
+                ddqk = f2(qk, vk, uk);
+                % calcuate defect constraints besed on trapezoidal rule
+                g1 = vk - vkPrev -dt/2*(ddqk + ddqkPrev);
+                g2 = qk - qkPrev -vkPrev*dt - dt^2*(2*ddqkPrev + ddqk)/6;
                 g = [g1;g2];
             otherwise
                 warning('Unexpected config.method.dynamics.')
