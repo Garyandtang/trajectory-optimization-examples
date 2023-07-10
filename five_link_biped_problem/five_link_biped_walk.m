@@ -8,8 +8,8 @@ nControl = model.dim.nControl;
 
 %%% setup cost
 problem.cost.type = "LQR";
-problem.cost.R = 10 * eye(nControl);
-problem.cost.Q = 0 * eye(nState);
+problem.cost.R = 1 * eye(nControl);
+problem.cost.Q = 100 * eye(nState);
 
 %%% setup constraints
 % boundaries constraints

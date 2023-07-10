@@ -63,23 +63,26 @@ plot(t, optimalQTraj);
 figure(65); clf;
 plot(t,cp1Soln.interp.configError(t));
 box on;
+grid on
 hold on
 plot(t,cp2Soln.interp.configError(t));
 plot(t,cp3Soln.interp.configError(t));
 plot(t,consistentSoln.interp.configError(t));
 legend("CG1", 'CG2', "CG3","Ours",'Interpreter','latex','FontSize',10)
-ylabel('$\varepsilon_{config}(t)$','Interpreter','latex','FontSize',16)
+ylabel('$\varepsilon(t)$','Interpreter','latex','FontSize',16)
 xlabel('$t$','Interpreter','latex','FontSize',16)
 % plot configuration error in each time interval
 figure(66); clf; 
 scatter(idx,cp1Soln.info.configError(1,:), 'o','filled');
 box on;
+grid on
 hold on
+
 scatter(idx,cp2Soln.info.configError(1,:), 'o','filled');
 scatter(idx,cp3Soln.info.configError(1,:), 'o','filled');
 scatter(idx,consistentSoln.info.configError(1,:), 'o','filled');
-legend("CG1", 'CP2', "CG3","Ours",'Interpreter','latex')
-ylabel('$\eta_{config,k}$','Interpreter','latex','FontSize',16)
+legend("CG1", 'CG2', "CG3","Ours",'Interpreter','latex')
+ylabel('$\eta$','Interpreter','latex','FontSize',16)
 xlabel('$k$','Interpreter','latex','FontSize',16)
 hold off
 % plot system dynamic error evolution
