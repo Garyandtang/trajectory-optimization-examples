@@ -20,7 +20,7 @@ clc;clear;
 addpath(genpath("D:\software\casadi-windows-matlabR2016a-v3.5.5"))
 import casadi.*
 addpath("..\models\")
-
+addpath("..")
 %%% setup problem
 model = blockMoveModel();
 problem.model = model;
@@ -61,13 +61,13 @@ plot(t, optimalQTraj);
 
 % plot configuration error evolution
 figure(65); clf;
-plot(t,cp1Soln.interp.configError(t));
+plot(t,cp1Soln.interp.configError(t),'-');
 box on;
 grid on
 hold on
-plot(t,cp2Soln.interp.configError(t));
-plot(t,cp3Soln.interp.configError(t));
-plot(t,consistentSoln.interp.configError(t));
+plot(t,cp2Soln.interp.configError(t),'--');
+plot(t,cp3Soln.interp.configError(t),':');
+plot(t,consistentSoln.interp.configError(t),'-.');
 legend("CG1", 'CG2', "CG3","Ours",'Interpreter','latex','FontSize',10)
 ylabel('$\varepsilon(t)$','Interpreter','latex','FontSize',16)
 xlabel('$t$','Interpreter','latex','FontSize',16)
@@ -78,9 +78,9 @@ box on;
 grid on
 hold on
 
-scatter(idx,cp2Soln.info.configError(1,:), 'o','filled');
-scatter(idx,cp3Soln.info.configError(1,:), 'o','filled');
-scatter(idx,consistentSoln.info.configError(1,:), 'o','filled');
+scatter(idx,cp2Soln.info.configError(1,:), '^','filled');
+scatter(idx,cp3Soln.info.configError(1,:), 'v','filled');
+scatter(idx,consistentSoln.info.configError(1,:), 'square','filled');
 legend("CG1", 'CG2', "CG3","Ours",'Interpreter','latex')
 ylabel('$\eta$','Interpreter','latex','FontSize',16)
 xlabel('$k$','Interpreter','latex','FontSize',16)
