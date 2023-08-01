@@ -34,7 +34,7 @@ legend("CG1", "CG2","CG3","Ours",'Interpreter','latex','FontSize',10)
 ylabel('NLP Solver Time $(s)$','Interpreter','latex','FontSize',12)
 xlabel('$N$','Interpreter','latex','FontSize',12)
 
-startIdx = 5;
+startIdx = 7;
 endIdx = 12;
 nTrajs_list =  baseNTrajPts * (startIdx : endIdx);
 
@@ -44,7 +44,7 @@ hold on
 plot(nTrajs_list, errorResult.cg2(startIdx : endIdx), Marker="^");
 plot(nTrajs_list, errorResult.cg3(startIdx : endIdx), Marker="v");
 plot(nTrajs_list, errorResult.ours(startIdx : endIdx), Marker="square");
-xlim([25 60])
+xlim([35 60])
 grid on
 
 % legend("CG1", "CG2","CG3","Ours",'Interpreter','latex','FontSize',10)

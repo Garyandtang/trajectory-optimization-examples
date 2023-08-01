@@ -21,7 +21,7 @@ nConfig = problem.model.dim.nConfig;
 
 
 % other config
-config.method.objAppro = "trapzoid_explict";
+config.method.objAppro = "trapzoid_implict";
 baseNTrajPts = 5;
 
 % setup result 
@@ -36,7 +36,7 @@ errorResult.cg3 = [];
 errorResult.ours = [];
 
 % get true solution with large nTrajPts
-problem.grid.nTrajPts = 1000;
+problem.grid.nTrajPts = 500;
 config.method.dynamics = "second_order_trapzoidal";
 trueSoln = directTranscriptionMethod(problem, config);
 
@@ -62,12 +62,12 @@ for i = 1 : 12
     
     % first rk4
     config.method.dynamics = "second_order_trapzoidal";
-    config.method.objAppro = "trapzoid_implict";
+    config.method.objAppro = "trapzoid_explict";
     cg3Soln = directTranscriptionMethod(problem, config);
     
     % second rk4
     config.method.dynamics = "second_order_trapzoidal";
-    config.method.objAppro = "trapzoid_explict";
+    config.method.objAppro = "trapzoid_implict";
     oursSoln = directTranscriptionMethod(problem, config);
 
     %%% record the data
