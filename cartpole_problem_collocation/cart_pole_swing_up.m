@@ -14,7 +14,7 @@ problem.cost.Q = 0 * eye(nState);
 %%% setup constraints
 % boundaries constraints
 problem.constraints.boundarys.initState = zeros(nState,1);
-problem.constraints.boundarys.finalState = [2;0.8*pi;0;0];
+problem.constraints.boundarys.finalState = [2;pi;0;0];
 problem.constraints.boundarys.finalTime = 4;
 
 % bound constraints
