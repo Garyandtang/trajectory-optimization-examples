@@ -17,22 +17,22 @@
 clc;clear;
 
 %%% Setup casadi solver 
-addpath(genpath("D:\software\casadi-windows-matlabR2016a-v3.5.5"))
 import casadi.*
-addpath("..\models\")
-addpath("..\")
 addpath('utils');
 
+
 % setup dynamics config 
-config.m = 0.18;
+config.m1 = 1;
+config.m2 = 1;
 config.g = 9.81;
-config.Ixx = 0.0025;
-config.l = 0.086;
+config.l1 = 0.5;
+config.l2 = 0.5;
+
 %%% setup problem
-problem = quadrotor_2d_move_to(config);
+problem = acrobot_swing_up(config);
 
 % flag
-config.flag.animationOn = false;
+config.flag.animationOn = true;
 config.method.objAppro = "trapzoid_explict";
 
 % get true solution with large nTrajPts
@@ -47,7 +47,7 @@ problem.trueSoln.uSoln = trueSoln.uSoln;
 problem.trueSoln.tSoln = trueSoln.tSoln;
 
 % first euler
-problem.grid.nTrajPts = 30;
+problem.grid.nTrajPts = 50;
 config.method.dynamics = "first_order_euler";
 euler1Soln = directTranscriptionMethod(problem, config);
 
@@ -86,12 +86,24 @@ errorResult.secondEuler = [errorResult.secondEuler, sum(sum(euler2Soln.info.sysD
 errorResult.firstRk4 = [errorResult.firstRk4, sum(sum(rk1Soln.info.sysDymError))];
 errorResult.secondRk4 = [errorResult.secondRk4, sum(sum(rk2Soln.info.sysDymError))]
     
-save("2d_quadrotor_shooting_results.mat")
-
+save("acrobot_shooting_results.mat")
 if config.flag.animationOn
     soln = rk2Soln;
-    trajhandle = @traj_diamond;
-    draw_result(soln, trajhandle);
+    % Interpolate the solution on a uniform grid for plotting and animation:
+    tGrid = soln.tSoln;
+    t = linspace(tGrid(1),tGrid(end),1000);
+    q = soln.interp.q(t);
+    dq = soln.interp.dq(t);
+    z = [q;dq];
+    u = soln.interp.u(t);
+    % Animate the results:
+    A.plotFunc = @(t,z)( drawAcrobot(t,z,config) );
+    A.speed = 0.25;
+    A.figNum = 101;
+    animate(t,z,A)
+    
+    % Plot the results:
+    figure(1337); clf; plotAcrobot(t,z,u,config);
 end
 
 

@@ -38,8 +38,8 @@ while Loop_Time < T_end;  %Loop while the CPU time is less than the end of the s
     %Call the plot command
    feval(P.plotFunc,Loop_Time,xNow);
    drawnow;
-   exportgraphics(gcf,'testAnimated.gif','Append',true);
-   
+   %%% uncomment to save gif
+%    exportgraphics(gcf,'testAnimated.gif','Append',true);
    
        %The next few lines pull the time step that is closest to the real time
     RealTime = toc;

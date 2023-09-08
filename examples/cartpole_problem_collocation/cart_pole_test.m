@@ -15,6 +15,7 @@ config.dyn.m2 = 0.1;
 
 %%% setup problem
 problem = cart_pole_swing_up(config);
+problem.constraints.boundarys.finalState = [0;pi;0;0];
 
 baseNTrajPts = 400;
 % flag

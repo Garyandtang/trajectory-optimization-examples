@@ -1,5 +1,4 @@
 function problem = acrobot_swing_up(config)
-addpath("..\models\")
 %%% setup dynamics
 model = acrobot(config);
 problem.model = model;

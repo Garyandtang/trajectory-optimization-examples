@@ -1,38 +1,12 @@
-% block_move_main.m
-%
-% This script is used to demo the result of block move example
-%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Continous time trajectory formuation
-%
-% model:
-%   see: blockMoveModel.m
-%
-% problem:
-%       min_{u(t),q(t),dq(t)}  \int_0^1 u(t)^2 dt
-%           s.t.                ddq(t) = u(t)
-%                               q(0) = 0,   dq(1)=0,\\
-%                               q(1) = 1,   dq(1)= 0.
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 clc;clear;
-
 %%% Setup casadi solver 
-addpath(genpath("D:\software\casadi-windows-matlabR2016a-v3.5.5"))
 import casadi.*
-addpath("..\models\")
-addpath("..\")
-addpath('utils');
-addpath("..\solvers\")
-
 % setup dynamics config 
-config.m1 = 1;
-config.m2 = 1;
+config.m = 0.1;
 config.g = 9.81;
-config.l1 = 0.5;
-config.l2 = 0.5;
 
 %%% setup problem
-problem = acrobot_swing_up(config);
+problem = quadrotor_1d_move_to(config);
 
 % flag
 config.flag.animationOn = false;
@@ -66,6 +40,7 @@ rk1Soln = directTranscriptionMethod(problem,  config);
 config.method.dynamics = "second_order_rk4";
 rk2Soln = directTranscriptionMethod(problem,  config);
 
+
 % record result
 % setup result 
 timeResult.firstEuler = [];
@@ -89,25 +64,9 @@ errorResult.secondEuler = [errorResult.secondEuler, sum(sum(euler2Soln.info.sysD
 errorResult.firstRk4 = [errorResult.firstRk4, sum(sum(rk1Soln.info.sysDymError))];
 errorResult.secondRk4 = [errorResult.secondRk4, sum(sum(rk2Soln.info.sysDymError))]
     
-save("acrobot_shooting_results.mat")
-if config.flag.animationOn
-    soln = rk2Soln;
-    % Interpolate the solution on a uniform grid for plotting and animation:
-    tGrid = soln.tSoln;
-    t = linspace(tGrid(1),tGrid(end),1000);
-    q = soln.interp.q(t);
-    dq = soln.interp.dq(t);
-    z = [q;dq];
-    u = soln.interp.u(t);
-    % Animate the results:
-    A.plotFunc = @(t,z)( drawAcrobot(t,z,config) );
-    A.speed = 0.25;
-    A.figNum = 101;
-    animate(t,z,A)
-    
-    % Plot the results:
-    figure(1337); clf; plotAcrobot(t,z,u,config);
-end
+save("1d_quadrotor_shooting_results.mat")
+
+
 
 
 

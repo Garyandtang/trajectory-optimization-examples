@@ -1,7 +1,5 @@
 function soln = directTranscriptionMethod(problem, config)
 import casadi.*
-addpath("../");
-
 % get block move model
 model = problem.model;
 nState = model.dim.nState;
