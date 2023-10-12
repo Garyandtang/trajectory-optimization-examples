@@ -85,11 +85,11 @@ lbg = nlpContainer.constraints.lbg;
 ubg = nlpContainer.constraints.ubg;
 
 
-tic 
+
 % Create an NLP solver
 prob = struct('f', J, 'x', w, 'g', g);
 solver = nlpsol('solver', 'ipopt', prob);
-
+tic 
 % Solve the NLP
 sol = solver('x0', w0, 'lbx', lbw, 'ubx', ubw, 'lbg', lbg, 'ubg', ubg);
 w_opt = full(sol.x);
@@ -144,6 +144,10 @@ function nlpContainer = setDefectConstraints(nlpContainer, model, dt, config)
     nConfig = nState / 2;
     f = model.CTDynamic.evaluation.firstOrder; % this is 1st-order dynamics
     f2 = model.CTDynamic.evaluation.secondOrder; % this is 2nd-order dynamics
+    qkPrev = zeros(nConfig, 1);
+    qkPrev = zeros(nConfig, 1);
+    qk = zeros(nConfig, 1);
+    vk = zeros(nConfig, 1);
     for i = 2 : nTrajs
         ukPrev = nlpContainer.decVar.U(:, i-1);
         uk = nlpContainer.decVar.U(:, i);
@@ -169,6 +173,11 @@ function nlpContainer = setDefectConstraints(nlpContainer, model, dt, config)
                 g2 = qk - qkPrev - dt*vkPrev - 0.5*dt*dt*ddqkPrev;
                 g = [g1; g2];
             case "first_order_rk4"
+                 % decode q and q_dot from state z
+                qkPrev = zkPrev(1:nConfig, :);
+                vkPrev = zkPrev(nConfig+1:end, :);
+                qk = zk(1:nConfig, :);
+                vk = zk(nConfig+1:end, :);
                 k1 = dt*f(zkPrev, ukPrev);
                 k2 = dt*f(zkPrev + 0.5*k1, ukPrev);
                 k3 = dt*f(zkPrev + 0.5*k2, ukPrev);

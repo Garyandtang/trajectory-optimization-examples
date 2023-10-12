@@ -16,7 +16,7 @@ config.dyn.m2 = 0.1;
 %%% setup problem
 problem = cart_pole_swing_up(config);
 
-baseNTrajPts = 10;
+baseNTrajPts = 15;
 % flag
 config.flag.animationOn = true;
 config.method.objAppro = "trapzoid_explict";

@@ -61,15 +61,15 @@ plot(t, optimalQTraj);
 
 % plot configuration error evolution
 figure(65); clf;
-plot(t,cp1Soln.interp.configError(t),'-');
+plot(t,cp1Soln.interp.configError(t),'-',LineWidth=1.5);
 box on;
 grid on
 hold on
-plot(t,cp2Soln.interp.configError(t),'--');
-plot(t,cp3Soln.interp.configError(t),':');
-plot(t,consistentSoln.interp.configError(t),'-.');
+plot(t,cp2Soln.interp.configError(t),'--',LineWidth=1.5);
+plot(t,cp3Soln.interp.configError(t),':',LineWidth=1.5);
+plot(t,consistentSoln.interp.configError(t),'-.',LineWidth=1.5);
 legend("CG1", 'CG2', "CG3","Ours",'Interpreter','latex','FontSize',10)
-ylabel('$\varepsilon(t)$','Interpreter','latex','FontSize',16)
+ylabel('Approximation Error $\varepsilon(t)$','Interpreter','latex','FontSize',16)
 xlabel('$t$','Interpreter','latex','FontSize',16)
 % plot configuration error in each time interval
 figure(66); clf; 
@@ -82,7 +82,7 @@ scatter(idx,cp2Soln.info.configError(1,:), '^','filled');
 scatter(idx,cp3Soln.info.configError(1,:), 'v','filled');
 scatter(idx,consistentSoln.info.configError(1,:), 'square','filled');
 legend("CG1", 'CG2', "CG3","Ours",'Interpreter','latex')
-ylabel('$\eta$','Interpreter','latex','FontSize',16)
+ylabel('Accumulated Error $\eta_k$','Interpreter','latex','FontSize',16)
 xlabel('$k$','Interpreter','latex','FontSize',16)
 hold off
 % plot system dynamic error evolution

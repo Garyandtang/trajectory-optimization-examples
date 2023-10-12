@@ -18,8 +18,8 @@ problem.constraints.boundarys.finalState = [0;pi;0;0];
 problem.constraints.boundarys.finalTime = 3;
 
 % bound constraints
-problem.constraints.bounds.control.lower = -20*ones(nControl,1);
-problem.constraints.bounds.control.upper = 20*ones(nControl,1);
+problem.constraints.bounds.control.lower = -inf*ones(nControl,1);
+problem.constraints.bounds.control.upper = inf*ones(nControl,1);
 problem.constraints.bounds.state.lower = -inf*ones(nState,1);
 problem.constraints.bounds.state.upper = inf*ones(nState,1);
 problem.grid.nTrajPts = 100;

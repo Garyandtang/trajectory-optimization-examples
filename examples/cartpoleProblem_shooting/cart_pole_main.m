@@ -17,8 +17,8 @@ config.dyn.m2 = 0.1;
 problem = cart_pole_swing_up(config);
 
 % other config
-config.method.objAppro = "trapzoid_explict";
-baseNTrajPts = 10;
+config.method.objAppro = "trapzoid_implict";
+baseNTrajPts = 5;
 
 % setup result 
 timeResult.firstEuler = [];
@@ -32,8 +32,8 @@ errorResult.secondEuler = [];
 errorResult.secondRk4 = [];
 
 % get true solution with large nTrajPts
-problem.grid.nTrajPts = 500;
-config.method.dynamics = "second_order_euler";
+problem.grid.nTrajPts = 150;
+config.method.dynamics = "second_order_rk4";
 trueSoln = directTranscriptionMethod(problem, config);
 
 problem.trueSoln.qSoln = trueSoln.qSoln;
@@ -42,7 +42,7 @@ problem.trueSoln.ddqSoln = trueSoln.ddqSoln;
 problem.trueSoln.uSoln = trueSoln.uSoln;
 problem.trueSoln.tSoln = trueSoln.tSoln;
 
-for i = 1 : 15
+for i = 1 : 12
     %%% solve the problem
     problem.grid.nTrajPts = baseNTrajPts * i;
 

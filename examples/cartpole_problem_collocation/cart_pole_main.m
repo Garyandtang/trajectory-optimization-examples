@@ -1,11 +1,8 @@
 clc;clear;
 
 %%% Setup casadi solver 
-addpath(genpath("D:\software\casadi-windows-matlabR2016a-v3.5.5"))
 import casadi.*
-addpath("..\models\")
-addpath("..\");
-addpath("..\solvers\")
+
 
 %%% setup dynamics config
 config.dyn.g = 9.81;
@@ -46,7 +43,7 @@ problem.trueSoln.ddqSoln = trueSoln.ddqSoln;
 problem.trueSoln.uSoln = trueSoln.uSoln;
 problem.trueSoln.tSoln = trueSoln.tSoln;
 
-for i = 1 : 12
+for i = 1 : 50
     %%% solve the problem
     problem.grid.nTrajPts = baseNTrajPts * i;
 
