@@ -8,13 +8,13 @@ nControl = model.dim.nControl;
 
 %%% setup cost
 problem.cost.type = "LQR";
-problem.cost.R = 1 * eye(nControl);
+problem.cost.R = 5 * eye(nControl);
 problem.cost.Q = 0 * eye(nState);
 
 %%% setup constraints
 % boundaries constraints
 problem.constraints.boundarys.initState = zeros(nState,1);
-problem.constraints.boundarys.finalState = [3;3.14;0;0];
+problem.constraints.boundarys.finalState = [4;pi;0;0];
 problem.constraints.boundarys.finalTime = 4;
 
 % bound constraints

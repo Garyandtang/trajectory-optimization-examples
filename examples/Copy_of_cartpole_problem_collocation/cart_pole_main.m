@@ -4,14 +4,33 @@ clc;clear;
 import casadi.*
 
 
-%%% setup dynamics config
-config.dyn.g = 9.81;
-config.dyn.l = 1;
-config.dyn.m1 = 1;
-config.dyn.m2 = 0.1;
+% setup dynamics config 
+config.m1 = 3.2;
+config.m2 = 6.8;
+config.m3 = 20;
+config.m4 = 6.8;
+config.m5 = 3.2;
+config.I1 = 0.93;
+config.I2 = 1.0800;
+config.I3 = 2.2200;
+config.I4 = 1.0800;
+config.I5 = 0.9300;
+config.l1 = 0.4000;
+config.l2 = 0.4000;
+config.l3 = 0.6250;
+config.l4 = 0.4000;
+config.l5 = 0.4000;
+config.c1 = 0.1280;
+config.c2 = 0.1630;
+config.c3 = 0.2000;
+config.c4 = 0.1630;
+config.c5 = 0.1280;
+config.g = 9.8100;
+config.stepLength = 0.5000;
+config.stepTime = 0.7000;
 
 %%% setup problem
-problem = cart_pole_swing_up(config);
+problem = five_link_biped_walk(config);
 nState = problem.model.dim.nState;
 nControl = problem.model.dim.nControl;
 nConfig = problem.model.dim.nConfig;
@@ -33,7 +52,7 @@ errorResult.cg3 = [];
 errorResult.ours = [];
 
 % get true solution with large nTrajPts
-problem.grid.nTrajPts = 1000;
+problem.grid.nTrajPts = 500;
 config.method.dynamics = "second_order_trapzoidal";
 trueSoln = directTranscriptionMethod(problem, config);
 

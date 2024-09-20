@@ -62,12 +62,12 @@ for i = 2 : nTrajPts
     nlpConstainer.constraints.ubg = [nlpConstainer.constraints.ubg; zeros(nState,1)];
     % calculate cost function by tapezoidal rule
     if (objAppro == 1)
-        nlpConstainer.obj = nlpConstainer.obj + dt*(ukPrev^2 + uk^2)/2;
-    else
         nlpConstainer.obj = nlpConstainer.obj + dt*(ukPrev^2 + ukPrev*uk + uk^2)/3;
+    else
+        nlpConstainer.obj = nlpConstainer.obj + dt*(ukPrev^2 + uk^2)/2;
     end
     
-end
+end 
 
 % other constraints
 % start state constraint

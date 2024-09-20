@@ -6,7 +6,7 @@ clear; clc;
 close all
 
 load("cart_pole_result.mat")
-startIdx = 2;
+startIdx = 1;
 endIdx = 12;
 nTrajs_list =  baseNTrajPts * (startIdx : endIdx);
 
@@ -34,7 +34,7 @@ legend("CG1", "CG2","CG3","Ours",'Interpreter','latex','FontSize',10)
 ylabel('NLP Solver Time $(s)$','Interpreter','latex','FontSize',12)
 xlabel('$N$','Interpreter','latex','FontSize',12)
 
-startIdx = 5;
+startIdx = 1;
 endIdx = 12;
 nTrajs_list =  baseNTrajPts * (startIdx : endIdx);
 

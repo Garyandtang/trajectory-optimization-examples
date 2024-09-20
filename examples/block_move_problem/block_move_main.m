@@ -40,12 +40,12 @@ problem.grid.nTrajPts = 20;
 %%% solve the problem and get solution
 % case 1 with obj appro
 objApproximation = 1; % use F(t+1) - F(t) for approximation 
-cp1Soln = firstOrderTrapzoidMethod(problem,objApproximation);
+cp2Soln = firstOrderTrapzoidMethod(problem,objApproximation);
 consistentSoln = consistentTrapzoidMethod(problem, objApproximation);
 
 % case 2 without obj appro
 objApproximation = 0; % use trapzoid method for obj approximation
-cp2Soln = firstOrderTrapzoidMethod(problem, objApproximation);
+cp1Soln = firstOrderTrapzoidMethod(problem, objApproximation);
 cp3Soln = consistentTrapzoidMethod(problem, objApproximation);
 
 %%% Plot the results:
