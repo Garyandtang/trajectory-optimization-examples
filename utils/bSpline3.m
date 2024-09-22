@@ -69,13 +69,13 @@ function x = bSpline3Core(h,delta,qLow,vLow, ddqLow,ddqUpp)
 %
 
 %Fix dimensions for matrix operations...
-% col = ones(size(delta));
-% row = ones(size(qLow));
-% delta = row*delta;
-% qLow = qLow*col;
-% vLow = vLow*col;
-% ddqLow = ddqLow*col;
-% ddqUpp = ddqUpp*col;
+col = ones(size(delta));
+row = ones(size(qLow));
+delta = row*delta;
+qLow = qLow*col;
+vLow = vLow*col;
+ddqLow = ddqLow*col;
+ddqUpp = ddqUpp*col;
 
 ddqDel = (0.5/h)*(ddqUpp - ddqLow);
 x = qLow + delta.*vLow + 0.5*delta.*delta.*ddqLow + (1/3)*delta.*delta.*delta.*ddqDel;

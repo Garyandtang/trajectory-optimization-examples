@@ -33,7 +33,7 @@ errorResult.cg3 = [];
 errorResult.ours = [];
 
 % get true solution with large nTrajPts
-problem.grid.nTrajPts = 1000;
+problem.grid.nTrajPts = 500;
 config.method.dynamics = "second_order_trapzoidal";
 trueSoln = directTranscriptionMethod(problem, config);
 
@@ -45,7 +45,7 @@ problem.trueSoln.tSoln = trueSoln.tSoln;
 
 for i = 1 : 12
     %%% solve the problem
-    problem.grid.nTrajPts = baseNTrajPts * i;
+    problem.grid.nTrajPts = baseNTrajPts * i ;
 
     % first euler
     config.method.dynamics = "first_order_trapzoidal";

@@ -49,15 +49,15 @@ cp1Soln = firstOrderTrapzoidMethod(problem, objApproximation);
 cp3Soln = consistentTrapzoidMethod(problem, objApproximation);
 
 %%% Plot the results:
-t = linspace(consistentSoln.tSoln(1),consistentSoln.tSoln(end),1000);
+t = linspace(consistentSoln.tSoln(1),consistentSoln.tSoln(end),100);
 idx = 1:length(consistentSoln.info.configError);
 consistentQTraj = consistentSoln.interp.q(t);
 optimalQTraj = consistentSoln.optimalSoln.q(t);
 
-% plot result q trajectory and optimal q trajectory
-figure(101); clf; plot(t,consistentQTraj);
-hold on
-plot(t, optimalQTraj);
+% % plot result q trajectory and optimal q trajectory
+% figure(101); clf; plot(t,consistentQTraj);
+% hold on
+% plot(t, optimalQTraj);
 
 % plot configuration error evolution
 figure(65); clf;
@@ -88,12 +88,12 @@ hold off
 % plot system dynamic error evolution
 figure(67); clf;
 cp1SysDymError = cp1Soln.interp.sysDymError(t);
-plot(t,cp1SysDymError(end,:));
-hold on
-cp2SysDymError = cp2Soln.interp.sysDymError(t);
-plot(t,cp2SysDymError(end,:));
+plot(t,cp1Soln.interp.sysDymError(t));
 % hold on
-cp3SysDymError = cp3Soln.interp.sysDymError(t);
-plot(t,cp3SysDymError(end,:));
-plot(t,consistentSoln.interp.sysDymError(t));
-legend("CG1", 'CG2', "CG3","Ours",'Interpreter','latex')
+cp2SysDymError = cp2Soln.interp.sysDymError(t);
+% plot(t,cp2Soln.interp.sysDymError(t));
+% hold on
+% cp3SysDymError = cp3Soln.interp.sysDymError(t);
+% plot(t,cp3Soln.interp.sysDymError(t));
+% plot(t,consistentSoln.interp.sysDymError(t));
+% legend("CG1", 'CG2', "CG3","Ours",'Interpreter','latex')

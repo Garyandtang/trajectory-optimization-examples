@@ -104,14 +104,17 @@ soln.tSoln = tSoln;
 soln.qSoln = xSoln(1:nConfig,:);
 soln.dqSoln = xSoln(nConfig+1:end,:);
 soln.uSoln = uSoln;
+soln.xSoln = xSoln;
 % recover ddq result based on second-order system dyns
 soln.ddqSoln = full(f2(soln.qSoln, soln.dqSoln, uSoln));
+soln.dxSoln = full(f1(soln.xSoln, uSoln));
 
 soln.interp.u = @(tt)( interp1(tSoln',uSoln',tt')' );
 soln.interp.ddq = @(tt)( interp1(tSoln', soln.ddqSoln', tt')');
 soln.interp.dq = @(tt)(bSpline2(tSoln, soln.dqSoln, soln.ddqSoln,tt));
 soln.interp.q = @(tt)(bSpline3(tSoln, soln.qSoln, soln.dqSoln, soln.ddqSoln, tt));
-soln.interp.x = @(t)([soln.interp.q(t);soln.interp.dq(t)]);
+soln.interp.x = @(t)(bSpline2(tSoln, xSoln, soln.dxSoln, t));
+
 
 if (isfield(problem, "optimalSoln"))
    soln.interp.sysDymError = @(t)(soln.interp.q(t) - problem.optimalSoln.qSoln(t));
@@ -122,8 +125,13 @@ elseif (isfield(problem, "trueSoln"))
     soln.interp.sysDymError = @(t)(soln.interp.q(t) - trueSoln.interp.q(t));
 else 
     warning("trueSoln is not provided, use estimated system dynamics error")
-    soln.interp.sysDymError = @(t)(full(f2(soln.interp.q(t),soln.interp.dq(t),soln.interp.u(t)))- ...
-                               soln.interp.ddq(t));
+%     if (config.method.dynamics == "first_order_trapzoidal")
+%         soln.interp.sysDymError = @(t)(full(f1(soln.interp.x(t), soln.interp.u(t)) - interp1(tSoln', soln.dxSoln', t')'));
+%         soln.interp.sysDymError = @(t)(full(f2(soln.interp.q(t),soln.interp.dq(t),soln.interp.u(t)))- soln.interp.ddq(t));
+%     elseif (config.method.dynamics == "second_order_trapzoidal")
+%         soln.interp.sysDymError = @(t)(full(f2(soln.interp.q(t),soln.interp.dq(t),soln.interp.u(t)))- soln.interp.ddq(t));
+%     end
+    soln.interp.sysDymError = @(t)(full(f2(soln.interp.q(t),soln.interp.dq(t),soln.interp.u(t)))- soln.interp.ddq(t));
 end
 
 
