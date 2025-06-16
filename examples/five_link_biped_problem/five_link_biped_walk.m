@@ -1,5 +1,5 @@
 function problem = five_link_biped_walk(config)
-addpath("..\models\")
+addpath("../models/")
 %%% setup dynamics
 model = fiveLinkBiped(config);
 problem.model = model;

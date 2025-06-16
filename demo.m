@@ -2,8 +2,8 @@ clc;clear;
 
 %%% Setup casadi solver 
 import casadi.*
-addpath('examples\five_link_biped_problem\utils\');
-addpath('examples\five_link_biped_problem\');
+addpath('examples/five_link_biped_problem/utils/');
+addpath('examples/five_link_biped_problem/');
 % setup dynamics config 
 config.m1 = 3.2;
 config.m2 = 6.8;
