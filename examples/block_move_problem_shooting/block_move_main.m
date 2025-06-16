@@ -17,10 +17,7 @@
 clc;clear;
 
 %%% Setup casadi solver 
-addpath(genpath("D:\software\casadi-windows-matlabR2016a-v3.5.5"))
 import casadi.*
-addpath("..\models\")
-addpath("..\")
 
 % setup dynamics config 
 config.m = 1;

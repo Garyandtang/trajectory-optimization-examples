@@ -1,4 +1,5 @@
-addpath(genpath("/Users/tangjiawei/Documents/GitHub/trajectory-optimization-examples/casadi/casadi-3.7.0-osx_arm64-matlab2018b"))
+addpath(genpath("D:\software\casadi-windows-matlabR2016a-v3.5.5"))
+
 
 addpath("models/")
 addpath("solvers/")

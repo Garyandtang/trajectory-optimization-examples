@@ -1,36 +1,21 @@
 clc;clear;
 
 %%% Setup casadi solver 
-% addpath(genpath("D:\software\casadi-windows-matlabR2016a-v3.5.5"))
 import casadi.*
-addpath("..\models\")
-addpath("..\")
-addpath('utils');
 
-% setup dynamics config 
-config.m = 0.18;
-config.g = 9.81;
-config.Ixx = 0.0025;
-config.l = 0.086;
+%%% setup dynamics config
+config.dyn.g = 9.81;
+config.dyn.l = 1;
+config.dyn.m1 = 1;
+config.dyn.m2 = 0.1;
+
 %%% setup problem
-problem = quadrotor_2d_move_to(config);
+problem = cart_pole_swing_up(config);
 
-% flag
-config.flag.animationOn = true;
-config.method.objAppro = "trapzoid_explict";
+% other config
+config.method.objAppro = "trapzoid_implict";
+baseNTrajPts = 5;
 
-% get true solution with large nTrajPts
-problem.grid.nTrajPts = 500;
-config.method.dynamics = "second_order_rk4";
-trueSoln = directTranscriptionMethod(problem, config);
-
-problem.trueSoln.qSoln = trueSoln.qSoln;
-problem.trueSoln.dqSoln = trueSoln.dqSoln;
-problem.trueSoln.ddqSoln = trueSoln.ddqSoln;
-problem.trueSoln.uSoln = trueSoln.uSoln;
-problem.trueSoln.tSoln = trueSoln.tSoln;
-
-baseNTrajPts = 10;
 % setup result 
 timeResult.firstEuler = [];
 timeResult.firstRk4 = [];
@@ -42,7 +27,18 @@ errorResult.firstRk4 = [];
 errorResult.secondEuler = [];
 errorResult.secondRk4 = [];
 
-for i = 1 : 15
+% get true solution with large nTrajPts
+problem.grid.nTrajPts = 150;
+config.method.dynamics = "second_order_rk4";
+trueSoln = directTranscriptionMethod(problem, config);
+
+problem.trueSoln.qSoln = trueSoln.qSoln;
+problem.trueSoln.dqSoln = trueSoln.dqSoln;
+problem.trueSoln.ddqSoln = trueSoln.ddqSoln;
+problem.trueSoln.uSoln = trueSoln.uSoln;
+problem.trueSoln.tSoln = trueSoln.tSoln;
+
+for i = 1 : 12
     %%% solve the problem
     problem.grid.nTrajPts = baseNTrajPts * i;
 
@@ -77,10 +73,6 @@ for i = 1 : 15
     
 end
 
-save("data\quadrotor2d_result.mat")
-
-
-
-
+save("data\cart_pole_result.mat")
 
 
